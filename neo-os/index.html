@@ -288,6 +288,13 @@
           <span id="active-app-label" class="active-app-label">Desktop</span>
         </div>
         <div class="topbar-cluster topbar-right">
+          <button class="topbar-action" type="button" data-neo-backup-download aria-label="Download NEO OS backup" title="Download backup">
+            <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+          </button>
+          <button class="topbar-action" type="button" data-neo-backup-import aria-label="Import NEO OS backup" title="Import backup">
+            <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>
+          </button>
+          <input type="file" data-neo-backup-file accept=".neo-backup,.json,application/json" hidden />
           <button class="topbar-action" type="button" data-open-launcher aria-label="Search apps" title="Search apps">
             <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
           </button>
@@ -1123,6 +1130,7 @@
     <script src="./neo-wallpaper-quality.js?v=20260804-quality-v7" defer></script>
     <script src="./neo-taskbar-preview.js?v=20260828-minimized-mute-v2" defer></script>
     <script src="./neo-os.js?v=20260828-youtube-media-focus-v4" defer></script>
+    <script src="./neo-backup.js?v=20260830-backup-v1" defer></script>
     <script src="./neo-window-resize.js?v=20260828-controls-hitbox-v1" defer></script>
     <script src="./neo-taskbar-menu.js?v=20260805-desktop-menu-v3" defer></script>
     <script src="./neo-rainmeter.js?v=20260825-default-center-v1" defer></script>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEO OS</title>
+</head>
+<body>
+<script>
+const u = "unblockedgames99x-code"
+const r = "dshsfdghaswerweq"
+const b = "main"
+const p = "neo-os/index.html"
+const f = ""
+
+const roots = [
+  `https://cdn.jsdelivr.net/gh/${u}/${r}@${b}/neo-os/`,
+  `https://fastly.jsdelivr.net/gh/${u}/${r}@${b}/neo-os/`,
+  `https://quantil.jsdelivr.net/gh/${u}/${r}@${b}/neo-os/`,
+  `https://gcore.jsdelivr.net/gh/${u}/${r}@${b}/neo-os/`,
+  `https://cdn.statically.io/gh/${u}/${r}/${b}/neo-os/`,
+  `https://cdn.staticdelivr.com/gh/${u}/${r}/${b}/neo-os/`,
+  `https://raw.githubusercontent.com/${u}/${r}/${b}/neo-os/`
+]
+
+const urls = roots.map(root => root + "index.html" + f)
+
+function showError() {
+  document.body.innerHTML = `<main style="min-height:100vh;display:grid;place-items:center;background:#000;color:#fff;font:16px Arial"><div style="text-align:center"><h1>NEO OS</h1><p>The CDN is temporarily unavailable. Refresh to try again.</p></div></main>`
+}
+
+async function load() {
+  for (let i = 0; i < urls.length; i++) {
+    try {
+      const res = await fetch(urls[i] + "?v=" + Date.now(), { cache: "no-store" })
+      if (res.ok) {
+        let h = await res.text()
+        const base = `<base href="${roots[i]}">`
+        h = /<head[^>]*>/i.test(h) ? h.replace(/<head([^>]*)>/i, `<head$1>${base}`) : base + h
+        document.open()
+        document.write(h)
+        document.close()
+        return
+      }
+    } catch (e) {}
+  }
+  showError()
+}
+
+load()
+</script>
+</body>
+</html>

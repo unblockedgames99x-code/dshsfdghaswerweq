@@ -13,14 +13,15 @@ const b = "main"
 const p = "neo-os/index.html"
 const f = ""
 
+const https = "https:" + "/" + "/"
 const roots = [
-  `https://cdn.jsdelivr.net/gh/${u}/${r}@${b}/neo-os/`,
-  `https://fastly.jsdelivr.net/gh/${u}/${r}@${b}/neo-os/`,
-  `https://quantil.jsdelivr.net/gh/${u}/${r}@${b}/neo-os/`,
-  `https://gcore.jsdelivr.net/gh/${u}/${r}@${b}/neo-os/`,
-  `https://cdn.statically.io/gh/${u}/${r}/${b}/neo-os/`,
-  `https://cdn.staticdelivr.com/gh/${u}/${r}/${b}/neo-os/`,
-  `https://raw.githubusercontent.com/${u}/${r}/${b}/neo-os/`
+  https + "cdn.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/neo-os/",
+  https + "fastly.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/neo-os/",
+  https + "quantil.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/neo-os/",
+  https + "gcore.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/neo-os/",
+  https + "cdn.statically.io/gh/" + u + "/" + r + "/" + b + "/neo-os/",
+  https + "cdn.staticdelivr.com/gh/" + u + "/" + r + "/" + b + "/neo-os/",
+  https + "raw.githubusercontent.com/" + u + "/" + r + "/" + b + "/neo-os/"
 ]
 
 const urls = roots.map(root => root + "index.html" + f)

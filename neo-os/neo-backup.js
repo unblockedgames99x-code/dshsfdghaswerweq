@@ -23,8 +23,9 @@
   if (!downloadButton || !importButton || !fileInput) return;
 
   function notify(title, message, icon) {
-    if (window.NEOShell && typeof window.NEOShell.notify === "function") {
-      window.NEOShell.notify(title, message, icon || "info");
+    var shell = window.NEO_SHELL || window.NEOShell;
+    if (shell && typeof shell.notify === "function") {
+      shell.notify(title, message, icon || "info");
     }
   }
 
@@ -235,6 +236,8 @@
         return;
       }
       var store = transaction.objectStore(storeName);
+      var keyPath = store.keyPath;
+      var autoIncrement = store.autoIncrement;
       var records = [];
       var indexes = Array.from(store.indexNames).map(function (indexName) {
         var index = store.index(indexName);
@@ -257,8 +260,8 @@
           }
           resolve({
             name: storeName,
-            keyPath: store.keyPath,
-            autoIncrement: store.autoIncrement,
+            keyPath: keyPath,
+            autoIncrement: autoIncrement,
             indexes: indexes,
             records: encoded
           });

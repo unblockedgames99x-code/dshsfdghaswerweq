@@ -1,43 +1,79 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>NEO OS</title>
   <style>
-    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
-    #neo{display:block;width:100%;height:100%;border:0;background:#000}
-    #status{position:fixed;inset:0;display:grid;place-items:center;background:#000;color:#fff;font:16px Arial;z-index:2}
-    #status[hidden]{display:none}
+    :root{color-scheme:dark}
+    *{box-sizing:border-box}
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#05070b;color:#fff;font-family:Arial,sans-serif}
+    body{display:grid;place-items:center}
+    #choose{text-align:center}
+    button{margin:6px;padding:13px 18px;border:0;border-radius:10px;background:#fff;color:#05070b;font:700 14px Arial,sans-serif;cursor:pointer}
+    button+button{background:#252830;color:#fff}
+    button:disabled{opacity:.45;cursor:wait}
+    p{margin:12px 0 0;font-size:13px;color:#8f9bb0}
+    iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#000}
   </style>
 </head>
 <body>
-  <div id="status">Loading NEO OS…</div>
-  <iframe id="neo" title="NEO OS" allow="autoplay; fullscreen; clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  <main id="choose">
+    <button id="blank" disabled>Open in about:blank</button>
+    <button id="full" disabled>Full screen</button>
+    <p id="status">Checking NEO OS...</p>
+  </main>
   <script>
-    const u = "unblockedgames99x-code"
-    const r = "dshsfdghaswerweq"
-const b = "dde0ee21f70e9e302c76482633f57d57196d0194"
-    const p = "neo-os/"
-    const f = ""
+    (() => {
+      "use strict"
 
-    const https = "https:" + "/" + "/"
-    const assetMirrors = [
-      https + "cdn.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/" + p,
-      https + "fastly.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/" + p,
-      https + "quantil.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/" + p,
-      https + "gcore.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/" + p,
-      https + "cdn.statically.io/gh/" + u + "/" + r + "/" + b + "/" + p,
-      https + "cdn.staticdelivr.com/gh/" + u + "/" + r + "/" + b + "/" + p
-    ]
+      const https = "https:" + "/" + "/"
+      const hostedApp = https + "unblockedgames99x-code.github.io/dshsfdghaswerweq/neo-os/?v=bf59daa"
+      const blankButton = document.getElementById("blank")
+      const fullButton = document.getElementById("full")
+      const status = document.getElementById("status")
 
-    const site = https + u + ".github.io/" + r + "/" + p + "?v=" + b
-    const frame = document.getElementById("neo")
-    const status = document.getElementById("status")
-    window.NEO_CDN_MIRRORS = assetMirrors
-    frame.addEventListener("load", () => { status.hidden = true })
-    frame.addEventListener("error", () => { status.textContent = "NEO OS could not load. Refresh to try again." })
-    frame.src = site
+      function createFrame(targetDocument) {
+        const frame = targetDocument.createElement("iframe")
+        frame.src = hostedApp
+        frame.title = "NEO OS"
+        frame.allow = "autoplay; clipboard-read; clipboard-write; fullscreen; gamepad"
+        frame.allowFullscreen = true
+        frame.referrerPolicy = "strict-origin-when-cross-origin"
+        frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;background:#000"
+        return frame
+      }
+
+      function enableLaunch() {
+        blankButton.disabled = false
+        fullButton.disabled = false
+        status.textContent = "Choose how to launch NEO OS"
+      }
+
+      blankButton.addEventListener("click", () => {
+        const popup = window.open("about:blank", "_blank")
+        if (!popup) {
+          status.textContent = "Allow pop-ups and try again."
+          return
+        }
+        popup.document.title = "NEO OS"
+        popup.document.documentElement.style.cssText = "width:100%;height:100%;margin:0;overflow:hidden;background:#000"
+        popup.document.body.style.cssText = "width:100%;height:100%;margin:0;overflow:hidden;background:#000"
+        popup.document.body.replaceChildren(createFrame(popup.document))
+        popup.focus()
+      })
+
+      fullButton.addEventListener("click", () => {
+        const frame = createFrame(document)
+        document.body.replaceChildren(frame)
+        const requestFullscreen = frame.requestFullscreen || frame.webkitRequestFullscreen
+        if (requestFullscreen) Promise.resolve(requestFullscreen.call(frame, {navigationUI:"hide"})).catch(() => {})
+      })
+
+      fetch(hostedApp + "&launcher-check=" + Date.now(), {mode:"no-cors",cache:"no-store"})
+        .then(enableLaunch)
+        .catch(() => { status.textContent = "NEO OS could not load. Check your connection and refresh." })
+    })()
   </script>
 </body>
 </html>

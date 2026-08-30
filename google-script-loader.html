@@ -2,53 +2,42 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>NEO OS</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
+    #neo{display:block;width:100%;height:100%;border:0;background:#000}
+    #status{position:fixed;inset:0;display:grid;place-items:center;background:#000;color:#fff;font:16px Arial;z-index:2}
+    #status[hidden]{display:none}
+  </style>
 </head>
 <body>
-<script>
-const u = "unblockedgames99x-code"
-const r = "dshsfdghaswerweq"
-const b = "main"
-const p = "neo-os/index.html"
-const f = ""
+  <div id="status">Loading NEO OS…</div>
+  <iframe id="neo" title="NEO OS" allow="autoplay; fullscreen; clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  <script>
+    const u = "unblockedgames99x-code"
+    const r = "dshsfdghaswerweq"
+    const b = "9a6d470492311dd3a8d7169c9c4207c34ae53b90"
+    const p = "neo-os/"
+    const f = ""
 
-const https = "https:" + "/" + "/"
-const roots = [
-  https + "cdn.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/neo-os/",
-  https + "fastly.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/neo-os/",
-  https + "quantil.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/neo-os/",
-  https + "gcore.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/neo-os/",
-  https + "cdn.statically.io/gh/" + u + "/" + r + "/" + b + "/neo-os/",
-  https + "cdn.staticdelivr.com/gh/" + u + "/" + r + "/" + b + "/neo-os/",
-  https + "raw.githubusercontent.com/" + u + "/" + r + "/" + b + "/neo-os/"
-]
+    const https = "https:" + "/" + "/"
+    const assetMirrors = [
+      https + "cdn.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/" + p,
+      https + "fastly.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/" + p,
+      https + "quantil.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/" + p,
+      https + "gcore.jsdelivr.net/gh/" + u + "/" + r + "@" + b + "/" + p,
+      https + "cdn.statically.io/gh/" + u + "/" + r + "/" + b + "/" + p,
+      https + "cdn.staticdelivr.com/gh/" + u + "/" + r + "/" + b + "/" + p
+    ]
 
-const urls = roots.map(root => root + "index.html" + f)
-
-function showError() {
-  document.body.innerHTML = `<main style="min-height:100vh;display:grid;place-items:center;background:#000;color:#fff;font:16px Arial"><div style="text-align:center"><h1>NEO OS</h1><p>The CDN is temporarily unavailable. Refresh to try again.</p></div></main>`
-}
-
-async function load() {
-  for (let i = 0; i < urls.length; i++) {
-    try {
-      const res = await fetch(urls[i] + "?v=" + Date.now(), { cache: "no-store" })
-      if (res.ok) {
-        let h = await res.text()
-        const base = `<base href="${roots[i]}">`
-        h = /<head[^>]*>/i.test(h) ? h.replace(/<head([^>]*)>/i, `<head$1>${base}`) : base + h
-        document.open()
-        document.write(h)
-        document.close()
-        return
-      }
-    } catch (e) {}
-  }
-  showError()
-}
-
-load()
-</script>
+    const site = https + u + ".github.io/" + r + "/" + p + "?v=" + b
+    const frame = document.getElementById("neo")
+    const status = document.getElementById("status")
+    window.NEO_CDN_MIRRORS = assetMirrors
+    frame.addEventListener("load", () => { status.hidden = true })
+    frame.addEventListener("error", () => { status.textContent = "NEO OS could not load. Refresh to try again." })
+    frame.src = site
+  </script>
 </body>
 </html>

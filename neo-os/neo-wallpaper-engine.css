@@ -699,13 +699,7 @@ html[data-wallpaper-playback="error"] .wallpaper-runtime-state::before {
   border-color: #5f91eb;
 }
 
-.we-add-wallpaper input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  opacity: 0;
-}
+.wallpaper-upload-input { display: none; }
 
 @keyframes wallpaper-status-pulse {
   to { opacity: 0.45; }

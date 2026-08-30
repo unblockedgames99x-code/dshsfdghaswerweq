@@ -910,11 +910,11 @@
               <div class="studio-import-formats" aria-label="Supported formats">
                 <span>PNG</span><span>JPG</span><span>WebP</span><span>GIF</span><span>MP4</span><span>WebM</span>
               </div>
-              <label class="button primary">
+              <button class="button primary" type="button" data-wallpaper-upload-trigger="wallpaper-upload-create">
                 <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>
                 Choose media
-                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" data-wallpaper-upload multiple />
-              </label>
+              </button>
+              <input id="wallpaper-upload-create" class="wallpaper-upload-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" data-wallpaper-upload multiple />
               <small data-upload-note>Images, GIFs, MP4, or WebM up to 160 MB each</small>
             </section>
             </div>
@@ -925,7 +925,8 @@
               <button type="button" data-we-action="recent">Load</button>
               <button type="button" data-we-action="favorite">Save</button>
               <button type="button" data-we-action="configure">Configure</button>
-              <label class="we-add-wallpaper">+ Add wallpaper<input type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" data-wallpaper-upload /></label>
+              <button class="we-add-wallpaper" type="button" data-wallpaper-upload-trigger="wallpaper-upload-footer">+ Add wallpaper</button>
+              <input id="wallpaper-upload-footer" class="wallpaper-upload-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" data-wallpaper-upload />
             </footer>
           </section>
 
@@ -1129,7 +1130,7 @@
     <script src="./neo-wallpaper-engine.js?v=20260827-exact-wallpaper-v1" defer></script>
     <script src="./neo-wallpaper-quality.js?v=20260804-quality-v7" defer></script>
     <script src="./neo-taskbar-preview.js?v=20260828-minimized-mute-v2" defer></script>
-    <script src="./neo-os.js?v=20260828-youtube-media-focus-v4" defer></script>
+    <script src="./neo-os.js?v=20260830-wallpaper-upload-v1" defer></script>
     <script src="./neo-backup.js?v=20260830-backup-v1" defer></script>
     <script src="./neo-window-resize.js?v=20260828-controls-hitbox-v1" defer></script>
     <script src="./neo-taskbar-menu.js?v=20260805-desktop-menu-v3" defer></script>

@@ -4752,6 +4752,18 @@
 
     document.addEventListener("click", function (event) {
       if (!launcher.hidden && !event.target.closest("#app-launcher, [data-open-launcher]")) setLauncherOpen(false);
+      var wallpaperUploadTrigger = event.target.closest("[data-wallpaper-upload-trigger]");
+      if (wallpaperUploadTrigger) {
+        event.preventDefault();
+        var wallpaperUpload = document.getElementById(wallpaperUploadTrigger.getAttribute("data-wallpaper-upload-trigger"));
+        if (!wallpaperUpload || wallpaperUpload.disabled) return;
+        wallpaperUpload.value = "";
+        if (typeof wallpaperUpload.showPicker === "function") {
+          try { wallpaperUpload.showPicker(); return; } catch (error) {}
+        }
+        wallpaperUpload.click();
+        return;
+      }
       var volumeTrigger = event.target.closest("[data-now-playing-volume-trigger]");
       if (volumeTrigger) {
         event.preventDefault();

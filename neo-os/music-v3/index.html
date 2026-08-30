@@ -171,9 +171,17 @@
                 }
             })();
         </script>
-        <script src="./neo-os-prelude.js"></script>
+        <script>
+            try {
+                if (localStorage.getItem('neo_music_full_tracks_v1') !== '1') {
+                    localStorage.setItem('neo_music_full_tracks_v1', '1');
+                    indexedDB.deleteDatabase('monochrome-cache');
+                }
+            } catch (_) {}
+        </script>
+        <script src="./neo-os-prelude.js?v=20260830-full-tracks-v1"></script>
         <script src="./neo-os-bridge.js" defer></script>
-      <script type="module" crossorigin src="./assets/index-INyHQp-7.js"></script>
+      <script type="module" crossorigin src="./assets/index-INyHQp-7.js?v=20260830-full-tracks-v2"></script>
       <link rel="stylesheet" crossorigin href="./assets/index-zZuNYish.css">
     </head>
 

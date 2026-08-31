@@ -23,6 +23,68 @@
     });
   }
   const originalAppendChild = Node.prototype.appendChild;
+  const pictureInPicturePathStart = "M19 7h-8v6h8V7z";
+
+  const getPictureInPictureButton = () =>
+    Array.from(document.querySelectorAll("button")).find((button) =>
+      Array.from(button.querySelectorAll("svg path")).some((path) =>
+        (path.getAttribute("d") || "").startsWith(pictureInPicturePathStart),
+      ),
+    );
+
+  const setFallbackPictureInPicture = (enabled) => {
+    document.body?.classList.toggle("neo-picture-in-picture", enabled);
+    const button = getPictureInPictureButton();
+    if (button) button.setAttribute("aria-pressed", String(enabled));
+  };
+
+  const syncPictureInPictureControl = () => {
+    const button = getPictureInPictureButton();
+    if (!button) {
+      if (!document.querySelector("#video-element")) setFallbackPictureInPicture(false);
+      return;
+    }
+
+    button.dataset.neoPictureInPicture = "true";
+    button.setAttribute("aria-label", "Picture in picture");
+    button.setAttribute("title", "Picture in picture");
+    button.setAttribute(
+      "aria-pressed",
+      String(Boolean(document.pictureInPictureElement) || document.body.classList.contains("neo-picture-in-picture")),
+    );
+  };
+
+  const togglePictureInPicture = async () => {
+    const video = document.querySelector("#video-element") || document.querySelector("video");
+    if (!video) return;
+
+    if (document.body.classList.contains("neo-picture-in-picture")) {
+      setFallbackPictureInPicture(false);
+      return;
+    }
+
+    if (document.pictureInPictureElement) {
+      try {
+        await document.exitPictureInPicture();
+      } catch (_error) {
+        setFallbackPictureInPicture(false);
+      }
+      return;
+    }
+
+    if (document.pictureInPictureEnabled && typeof video.requestPictureInPicture === "function") {
+      try {
+        await video.requestPictureInPicture();
+        syncPictureInPictureControl();
+        return;
+      } catch (_error) {
+        // Some embedded browsers expose the API but reject it. Use NEO TV's
+        // in-page mini-player so the control remains useful there too.
+      }
+    }
+
+    setFallbackPictureInPicture(true);
+  };
 
   Node.prototype.appendChild = function appendChild(node) {
     if (node instanceof HTMLScriptElement) {
@@ -84,6 +146,8 @@
         element.textContent = text.replace(/z-stream/gi, "NEO TV");
       }
     });
+
+    syncPictureInPictureControl();
   };
 
   let cleanupQueued = false;
@@ -101,4 +165,25 @@
     scheduleCleanup();
     observer.observe(document.documentElement, { childList: true, subtree: true });
   });
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      const button = event.target.closest?.("[data-neo-picture-in-picture='true']");
+      if (!button) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      void togglePictureInPicture();
+    },
+    true,
+  );
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && document.body.classList.contains("neo-picture-in-picture")) {
+      setFallbackPictureInPicture(false);
+    }
+  });
+
+  document.addEventListener("enterpictureinpicture", syncPictureInPictureControl, true);
+  document.addEventListener("leavepictureinpicture", syncPictureInPictureControl, true);
 })();

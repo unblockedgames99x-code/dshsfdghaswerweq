@@ -2689,7 +2689,7 @@
     ];
     if (app.id !== "browser") frameSandbox.push("allow-modals");
     frame.sandbox = frameSandbox.join(" ");
-    frame.allow = "fullscreen; autoplay; gamepad; clipboard-read; clipboard-write";
+    frame.allow = "fullscreen; autoplay; picture-in-picture; gamepad; clipboard-read; clipboard-write";
     frame.setAttribute("allowfullscreen", "");
     frame.dataset.route = app.route;
     body.append(loader, fallback, frame);

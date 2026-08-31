@@ -315,6 +315,12 @@
       return true;
     }
 
+    function destroy() {
+      stop();
+      window.removeEventListener("message", onMessage);
+      window.removeEventListener("neo-media-volume-request", onVolume);
+    }
+
     ["play", "pause", "playing", "loadedmetadata", "durationchange", "timeupdate", "volumechange", "ratechange"].forEach(function (name) {
       audio.addEventListener(name, broadcast);
     });
@@ -333,7 +339,7 @@
       try { navigator.mediaSession.setActionHandler("nexttrack", next); } catch (error) {}
       try { navigator.mediaSession.setActionHandler("previoustrack", previous); } catch (error) {}
     }
-    return { audio: audio, broadcast: broadcast, pause: pause, stop: stop };
+    return { audio: audio, broadcast: broadcast, pause: pause, stop: stop, destroy: destroy };
   }
 
   function createShell(app, body, iconMarkup) {
@@ -466,9 +472,11 @@
     var stopped = false;
     win.querySelectorAll(".music-direct-session").forEach(function (session) {
       var playback = session._neoPlayback;
-      if (!playback || typeof playback.stop !== "function") return;
+      if (!playback) return;
       try {
-        playback.stop();
+        if (typeof playback.destroy === "function") playback.destroy();
+        else if (typeof playback.stop === "function") playback.stop();
+        else return;
         stopped = true;
       } catch (error) {}
     });

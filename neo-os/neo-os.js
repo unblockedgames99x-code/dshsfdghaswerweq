@@ -3125,6 +3125,7 @@
     } catch (error) {}
     try { if (!win.hidden) saveWindowState(win); } catch (error) {}
     try { stopWindowMedia(win, id); } catch (error) {}
+    if (id === "stream") forceDestroy = true;
     var cached = false;
     try {
       cached = Boolean(musicRuntime.cacheWindow(win, id, openWindows, app, forceDestroy, renderDock, activateTopWindow));

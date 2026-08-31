@@ -3,13 +3,17 @@
 
     window.__NEO_MUSIC__ = true;
 
-    var launchUrl = new URL(window.location.href);
+    var shellOrigin = "";
+    try { shellOrigin = window.parent.location.origin; } catch (_error) {}
+    if (!shellOrigin || shellOrigin === "null") shellOrigin = window.location.origin;
+    var launchUrl = new URL(shellOrigin + "/");
     var nativeAddEventListener = window.EventTarget && window.EventTarget.prototype.addEventListener;
     var nativeDispatchEvent = window.EventTarget && window.EventTarget.prototype.dispatchEvent;
     var nativePreventDefault = window.Event && window.Event.prototype.preventDefault;
     var nativeStopPropagation = window.Event && window.Event.prototype.stopPropagation;
     var nativeClosest = window.Element && window.Element.prototype.closest;
     var nativePushState = window.History && window.History.prototype.pushState;
+    var nativeReplaceState = window.History && window.History.prototype.replaceState;
     var NativePopStateEvent = window.PopStateEvent;
     var historyTarget = window.history;
     var windowTarget = window;
@@ -19,6 +23,20 @@
 
     if (baseElement) baseElement.href = appBaseUrl.href;
     window.__NEO_MUSIC_BASE__ = appPath;
+
+    function routeUrl(value) {
+        if (typeof value !== "string" || value.charAt(0) !== "/") return value;
+        return shellOrigin + value;
+    }
+
+    if (nativePushState && nativeReplaceState) {
+        window.History.prototype.pushState = function (state, title, url) {
+            return nativePushState.call(this, state, title, routeUrl(url));
+        };
+        window.History.prototype.replaceState = function (state, title, url) {
+            return nativeReplaceState.call(this, state, title, routeUrl(url));
+        };
+    }
 
     // The supplied router expects to own paths such as /, /search, and /library.
     // Keep its assets anchored to the copied app while exposing that expected route.
@@ -39,7 +57,7 @@
 
             var destination;
             try {
-                destination = new URL(href, windowTarget.location.href);
+                destination = new URL(href, launchUrl.href);
             } catch (error) {
                 return;
             }
@@ -53,7 +71,7 @@
                 historyTarget,
                 { neoMusic: true },
                 "",
-                destination.pathname + destination.search + destination.hash
+                routeUrl(destination.pathname + destination.search + destination.hash)
             );
             nativeDispatchEvent.call(windowTarget, new NativePopStateEvent("popstate"));
         }, true);

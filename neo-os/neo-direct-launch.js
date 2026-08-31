@@ -2,14 +2,11 @@
   "use strict";
 
   var root = document.documentElement;
-  var boot = document.getElementById("neo-direct-boot");
-  var openBlankButton = document.getElementById("neo-open-blank");
-  var fullscreenButton = document.getElementById("neo-fullscreen");
-  var status = document.getElementById("neo-direct-status");
-
-  if (!boot || !openBlankButton || !fullscreenButton) return;
-
-  root.classList.add("neo-direct-booting");
+  var boot;
+  var openBlankButton;
+  var fullscreenButton;
+  var status;
+  var bound = false;
 
   function setStatus(message) {
     if (status) status.textContent = message;
@@ -57,8 +54,34 @@
     }
   }
 
-  openBlankButton.addEventListener("click", openInBlank);
-  fullscreenButton.addEventListener("click", enterFullscreen);
+  function bind() {
+    if (bound) return true;
 
-  if (document.body && document.body.getAttribute("data-neo-autostart") === "1") start();
+    boot = document.getElementById("neo-direct-boot") ||
+      document.querySelector('[role="dialog"][aria-label="Launch NEO OS"]');
+    if (!boot) return false;
+
+    var buttons = boot.querySelectorAll("button");
+    openBlankButton = document.getElementById("neo-open-blank") || buttons[0];
+    fullscreenButton = document.getElementById("neo-fullscreen") || buttons[1];
+    status = document.getElementById("neo-direct-status") || boot.querySelector("p");
+    if (!openBlankButton || !fullscreenButton) return false;
+
+    bound = true;
+    root.classList.add("neo-direct-booting");
+    openBlankButton.onclick = openInBlank;
+    fullscreenButton.onclick = enterFullscreen;
+
+    if (document.body && document.body.getAttribute("data-neo-autostart") === "1") start();
+    return true;
+  }
+
+  if (!bind()) {
+    document.addEventListener("DOMContentLoaded", bind, { once: true });
+    var attempts = 0;
+    var bindTimer = window.setInterval(function () {
+      attempts += 1;
+      if (bind() || attempts >= 80) window.clearInterval(bindTimer);
+    }, 50);
+  }
 })();

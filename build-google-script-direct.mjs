@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 
 const sourcePath = new URL("./neo-os/index.html", import.meta.url);
 const outputPath = new URL("./google-script-direct.html", import.meta.url);
-const revision = "c9804a2";
+const revision = "67f295b";
 const cdnRoot = `https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@${revision}/neo-os/`;
 const pageRoot = cdnRoot;
 
@@ -38,7 +38,7 @@ const bootBody = String.raw`
     <p id="neo-direct-status" aria-live="polite">Choose how to launch NEO OS</p>
   </div>
 </div>
-<script src="${cdnRoot}neo-direct-launch.js?v=20260830-google-boot-v2"></script>`;
+<script src="${cdnRoot}neo-direct-launch.js?v=20260830-google-boot-v3"></script>`;
 
 html = html.replace(/<body([^>]*)>/i, `<body$1>\n${bootBody}`);
 await writeFile(outputPath, html, "utf8");

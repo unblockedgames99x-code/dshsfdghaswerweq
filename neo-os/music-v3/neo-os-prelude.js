@@ -3,6 +3,7 @@
 
     window.__NEO_MUSIC__ = true;
 
+    var virtualRouting = window.location.href === "about:srcdoc" || window.location.origin === "null";
     var shellOrigin = "";
     try { shellOrigin = window.parent.location.origin; } catch (_error) {}
     if (!shellOrigin || shellOrigin === "null") shellOrigin = window.location.origin;
@@ -29,11 +30,28 @@
         return shellOrigin + value;
     }
 
+    function setVirtualRoute(value) {
+        var next;
+        try { next = new URL(String(value || "/"), "https://neo-music.invalid/"); }
+        catch (_error) { next = new URL("https://neo-music.invalid/"); }
+        window.__NEO_ROUTE_PATH__ = next.pathname || "/";
+        window.__NEO_ROUTE_SEARCH__ = next.search || "";
+        window.__NEO_ROUTE_HASH__ = next.hash || "";
+    }
+
     if (nativePushState && nativeReplaceState) {
         window.History.prototype.pushState = function (state, title, url) {
+            if (virtualRouting) {
+                setVirtualRoute(url);
+                return;
+            }
             return nativePushState.call(this, state, title, routeUrl(url));
         };
         window.History.prototype.replaceState = function (state, title, url) {
+            if (virtualRouting) {
+                setVirtualRoute(url);
+                return;
+            }
             return nativeReplaceState.call(this, state, title, routeUrl(url));
         };
     }
@@ -67,8 +85,7 @@
 
             if (nativePreventDefault) nativePreventDefault.call(event);
             if (nativeStopPropagation) nativeStopPropagation.call(event);
-            nativePushState.call(
-                historyTarget,
+            window.history.pushState(
                 { neoMusic: true },
                 "",
                 routeUrl(destination.pathname + destination.search + destination.hash)

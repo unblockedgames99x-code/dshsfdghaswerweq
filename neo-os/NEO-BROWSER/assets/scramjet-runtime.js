@@ -5,6 +5,7 @@
   const serviceWorkerUrl = new URL("sw.js?v=20260828-controller-handoff-v3", pageBase);
   const serviceWorkerScope = pageBase.pathname;
   const proxyBase = new URL("~/", pageBase).pathname;
+  const canRegisterServiceWorker = pageBase.origin === location.origin;
   const relayCacheKey = "neo:jet:last-relay:v2";
   const controllerReloadKey = "neo:jet:controller-reload:v3";
   const relayHosts = [
@@ -25,6 +26,7 @@
   let lastVisibleUrl = "";
 
   function supports(value) {
+    if (!canRegisterServiceWorker) return false;
     try {
       const url = new URL(value);
       return (url.protocol === "https:" || url.protocol === "http:") &&
@@ -195,6 +197,9 @@
   }
 
   async function registerServiceWorker() {
+    if (!canRegisterServiceWorker) {
+      throw new Error("This host uses the Chromebook compatibility transport.");
+    }
     if (!("serviceWorker" in navigator)) throw new Error("This browser does not support service workers.");
     if (location.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(location.hostname)) {
       throw new Error("Secure browsing compatibility requires HTTPS.");

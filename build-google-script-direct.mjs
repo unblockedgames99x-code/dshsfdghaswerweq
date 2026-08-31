@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 
 const sourcePath = new URL("./neo-os/index.html", import.meta.url);
 const outputPath = new URL("./google-script-direct.html", import.meta.url);
-const revision = "d9b4f49";
+const revision = "c9804a2";
 const cdnRoot = `https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@${revision}/neo-os/`;
 const pageRoot = cdnRoot;
 
@@ -35,37 +35,10 @@ const bootBody = String.raw`
       <button id="neo-open-blank" type="button">Open in about:blank</button>
       <button id="neo-fullscreen" type="button">Full screen</button>
     </div>
-    <p>Choose how to launch NEO OS</p>
+    <p id="neo-direct-status" aria-live="polite">Choose how to launch NEO OS</p>
   </div>
 </div>
-<script>
-(function () {
-  document.documentElement.classList.add('neo-direct-booting');
-  var boot = document.getElementById('neo-direct-boot');
-  function start() {
-    document.documentElement.classList.remove('neo-direct-booting');
-    if (boot) boot.remove();
-  }
-  if (document.body && document.body.getAttribute('data-neo-autostart') === '1') {
-    start();
-    return;
-  }
-  document.getElementById('neo-fullscreen').addEventListener('click', function () {
-    start();
-    var root = document.documentElement;
-    if (root.requestFullscreen) root.requestFullscreen().catch(function () {});
-  });
-  document.getElementById('neo-open-blank').addEventListener('click', function () {
-    var popup = window.open('about:blank', 'neo-os-' + Date.now());
-    if (!popup) return;
-    var copy = '<!doctype html>' + document.documentElement.outerHTML;
-    copy = copy.replace(/<body([^>]*)>/i, '<body$1 data-neo-autostart="1">');
-    popup.document.open();
-    popup.document.write(copy);
-    popup.document.close();
-  });
-}());
-</script>`;
+<script src="${cdnRoot}neo-direct-launch.js?v=20260830-google-boot-v2"></script>`;
 
 html = html.replace(/<body([^>]*)>/i, `<body$1>\n${bootBody}`);
 await writeFile(outputPath, html, "utf8");

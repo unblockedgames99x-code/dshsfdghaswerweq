@@ -24,6 +24,13 @@
     var baseUrl = new URL("./", sourceUrl).href;
     var html = String(source || "");
     html = html.replace(/<script\b(?=[^>]*\bsrc\s*=\s*["']\/ad-cleanup\.js(?:[?#][^"']*)?["'])[^>]*>\s*<\/script>/gi, "");
+    var sourceBase = html.match(/<base\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/i);
+    if (sourceBase && !/^(?:https?:|data:|blob:)/i.test(sourceBase[1])) {
+      html = html.replace(
+        sourceBase[0],
+        '<base href="' + escapeAttribute(new URL(sourceBase[1], baseUrl).href) + '" target="_self">'
+      );
+    }
     var hasAssetBase = /<base\b[^>]*\bhref\s*=/i.test(html);
     var injection = (hasAssetBase ? "" : '<base href="' + escapeAttribute(baseUrl) + '" target="_self">') +
       '<meta name="neo-runner" content="nested">';

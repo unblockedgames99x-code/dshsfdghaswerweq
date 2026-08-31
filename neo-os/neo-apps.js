@@ -22,19 +22,17 @@
     },
     cinehd: {
       id: "cinehd",
-      title: "Z-Stream",
-      subtitle: "Movies and series",
+      title: "NEO TV",
+      subtitle: "Movies and television",
       icon: "zstream",
-      template: "browser-template",
-      browserTarget: "https://zstream.mov/",
-      browserChrome: false,
+      route: "./neo-tv/index.html",
       keepAlive: true,
       width: 1180,
       height: 760,
       launcher: true,
       pinned: false,
       category: "Media",
-      aliases: ["zstream", "z-stream", "cinehd", "cine hd", "movies", "series", "tv", "streaming"]
+      aliases: ["neo tv", "movies", "series", "television", "tv", "streaming"]
     },
     discord: {
       id: "discord",

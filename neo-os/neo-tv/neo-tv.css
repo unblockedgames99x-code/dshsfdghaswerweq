@@ -1,0 +1,163 @@
+:root {
+  color-scheme: dark;
+  --neo-black: #000;
+  --neo-panel: #0b0b0b;
+  --neo-line: rgba(255, 255, 255, 0.13);
+  --neo-muted: #8f8f8f;
+}
+
+html,
+body,
+#root {
+  background: var(--neo-black) !important;
+}
+
+/* Keep interface chrome monochrome while media artwork retains full color. */
+button,
+input,
+select,
+textarea,
+svg,
+.neo-shell-header {
+  filter: grayscale(100%) saturate(0) !important;
+}
+
+img,
+picture,
+video,
+canvas,
+[style*="background-image"] {
+  filter: none !important;
+}
+
+/* The home hero stays neutral black instead of using the upstream purple glow. */
+.lightbar-visual {
+  --top: #000 !important;
+  --bottom: #000 !important;
+  background: #000 !important;
+}
+
+/* Clickable movie cards must never desaturate their poster artwork. */
+[role="button"] img,
+[role="button"] picture,
+[role="button"] [style*="background-image"] {
+  filter: none !important;
+}
+
+body {
+  margin: 0;
+}
+
+::selection {
+  background: #fff;
+  color: #000;
+}
+
+.neo-shell-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+  padding: 0 28px;
+  pointer-events: none;
+}
+
+.neo-shell-brand,
+.neo-shell-nav {
+  pointer-events: auto;
+}
+
+.neo-shell-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: #fff;
+  text-decoration: none;
+  letter-spacing: -0.04em;
+}
+
+.neo-shell-brand strong {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.neo-shell-brand span {
+  color: var(--neo-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.neo-shell-nav {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--neo-line);
+  border-radius: 999px;
+  background: rgba(4, 4, 4, 0.78);
+  backdrop-filter: blur(18px);
+}
+
+.neo-shell-nav a {
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: var(--neo-muted);
+  font: 700 12px/1.2 "DM Sans", system-ui, sans-serif;
+  text-decoration: none;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.neo-shell-nav a:hover,
+.neo-shell-nav a:focus-visible {
+  background: #fff;
+  color: #000;
+  outline: 0;
+}
+
+/* Hide the original branded/utility navigation while retaining its layout. */
+.top-content.fixed.pointer-events-none > .fixed > .relative.z-\[60\] {
+  visibility: hidden !important;
+}
+
+/* Keep the interface strictly black and white at startup. */
+.text-type-logo,
+.text-type-link,
+.text-purple-300,
+.text-purple-400,
+.text-purple-500,
+.text-purple-600,
+.text-pink-400,
+.text-fuchsia-400 {
+  color: #fff !important;
+}
+
+.bg-type-link,
+.bg-purple-300,
+.bg-purple-400,
+.bg-purple-500,
+.bg-purple-600 {
+  background-color: #fff !important;
+  color: #000 !important;
+}
+
+[class*="animate-gradient-flow"] {
+  background: #fff !important;
+  opacity: 0.85 !important;
+}
+
+[data-neo-removed="true"] {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .neo-shell-header {
+    height: 64px;
+    padding: 0 18px;
+  }
+
+  .neo-shell-nav a:not(:first-child) {
+    display: none;
+  }
+}

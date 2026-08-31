@@ -46,6 +46,54 @@
     return url.hostname === "fetchsongid.lasokar.workers.dev" && path === "/";
   }
 
+  function isGdAudioProxyUrl(url) {
+    return Boolean(url && url.hostname === "gd-proxy.gmdc.workers.dev" && url.pathname.replace(/\/+$/, "") === "/audio-proxy");
+  }
+
+  function isGdSongShortcutUrl(url) {
+    return Boolean(url && url.hostname === "fetchsongid.lasokar.workers.dev" && (url.pathname.replace(/\/+$/, "") || "/") === "/");
+  }
+
+  function requestHasRange(input, init) {
+    try {
+      var headers = new Headers(init && init.headers || input instanceof Request && input.headers || {});
+      return headers.has("range");
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function responseFromAudioBlob(blob) {
+    return new Response(blob, {
+      status: 200,
+      headers: {
+        "content-type": blob.type || "audio/mpeg",
+        "content-length": String(blob.size)
+      }
+    });
+  }
+
+  async function downloadGdSongShortcut(url, signal) {
+    var songId = String(url.searchParams.get("id") || "");
+    if (!/^\d+$/.test(songId)) throw new Error("The Geometry Dash song ID is invalid.");
+    var metadata = await relayFetch("https://gd-proxy.gmdc.workers.dev/getGJSongInfo.php", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: "songID=" + encodeURIComponent(songId) + "&secret=Wmfd2893gb7",
+      signal: signal
+    });
+    if (!metadata.ok) throw new Error("Geometry Dash song metadata returned HTTP " + metadata.status + ".");
+    var parts = (await metadata.text()).split("~|~");
+    var fields = {};
+    for (var index = 0; index + 1 < parts.length; index += 2) fields[parts[index]] = parts[index + 1];
+    var songUrl = String(fields["10"] || "").trim();
+    try { songUrl = decodeURIComponent(songUrl); } catch (_error) {}
+    if (!/^https:\/\//i.test(songUrl)) throw new Error("The full Geometry Dash song URL is unavailable.");
+    var proxyUrl = new URL("https://gd-proxy.gmdc.workers.dev/audio-proxy");
+    proxyUrl.searchParams.set("url", songUrl);
+    return responseFromAudioBlob(await downloadRelayedMedia(proxyUrl, signal));
+  }
+
   function encodeBytes(bytes) {
     var view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || 0);
     var parts = [];
@@ -60,6 +108,18 @@
     var bytes = new Uint8Array(binary.length);
     for (var index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
     return bytes;
+  }
+
+  function getHostWindow() {
+    var direct = window.parent;
+    try {
+      if (direct && direct.google && direct.google.script && direct.google.script.run) return direct;
+    } catch (_error) {}
+    try {
+      var popup = window.top;
+      if (popup && popup.opener && !popup.opener.closed) return popup.opener;
+    } catch (_error) {}
+    return direct;
   }
 
   function sendToHost(request, signal) {
@@ -95,7 +155,7 @@
       if (signal) signal.addEventListener("abort", abort, { once: true });
 
       try {
-        window.parent.postMessage({ type: "neo:network:request", id: id, request: request }, "*");
+        getHostWindow().postMessage({ type: "neo:network:request", id: id, request: request }, "*");
       } catch (error) {
         window.clearTimeout(timer);
         pending.delete(id);
@@ -137,7 +197,7 @@
     if (!isAllowedRelayUrl(targetUrl)) return nativeFetch(input, init);
 
     var request = await serializeRequest(input, init, targetUrl);
-    var signal = init && init.signal || input instanceof Request && input.signal;
+    var signal = init && init.signal || (input instanceof Request ? input.signal : undefined);
     var result = await sendToHost(request, signal);
     var status = Number(result && result.status) || 502;
     var responseInit = {
@@ -153,6 +213,14 @@
 
   window.fetch = function (input, init) {
     var url = unwrapMusicProxy(parseUrl(input instanceof Request ? input.url : input));
+    if (isGdSongShortcutUrl(url)) {
+      var shortcutSignal = init && init.signal || (input instanceof Request ? input.signal : undefined);
+      return downloadGdSongShortcut(url, shortcutSignal);
+    }
+    if (isGdAudioProxyUrl(url) && !requestHasRange(input, init)) {
+      var signal = init && init.signal || (input instanceof Request ? input.signal : undefined);
+      return downloadRelayedMedia(url, signal).then(responseFromAudioBlob);
+    }
     if (!isAllowedRelayUrl(url)) return nativeFetch(input, init);
     return relayFetch(input, init).catch(function (error) {
       if (error && error.name === "AbortError") throw error;
@@ -242,21 +310,22 @@
           objectUrl: "",
           pending: true,
           playRequested: false,
+          error: null,
           ready: null
         };
         state.set(element, current);
-        descriptor.set.call(element, "");
+        nativeRemoveAttribute.call(element, "src");
         current.ready = downloadRelayedMedia(target, current.controller.signal).then(function (blob) {
           if (state.get(element) !== current) return;
           current.objectUrl = URL.createObjectURL(blob);
           current.pending = false;
           descriptor.set.call(element, current.objectUrl);
           nativeLoad.call(element);
-        }).catch(function () {
+        }).catch(function (error) {
           if (state.get(element) !== current) return;
           current.pending = false;
-          descriptor.set.call(element, target.href);
-          nativeLoad.call(element);
+          current.error = error instanceof Error ? error : new Error("The full song could not be verified.");
+          nativeRemoveAttribute.call(element, "src");
         });
       }
     });
@@ -276,6 +345,7 @@
         if (state.get(element) !== current || !current.playRequested) {
           throw new DOMException("Playback was cancelled.", "AbortError");
         }
+        if (current.error) throw current.error;
         return nativePlay.call(element);
       });
     };

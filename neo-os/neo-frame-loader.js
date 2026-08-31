@@ -33,7 +33,11 @@
     }
     var hasAssetBase = /<base\b[^>]*\bhref\s*=/i.test(html);
     var networkRuntime = "";
-    if (isRunner() && !/\/NEO-BROWSER\//i.test(sourceUrl)) {
+    if (
+      isRunner() &&
+      !/\/NEO-BROWSER\//i.test(sourceUrl) &&
+      !/\/games\/web-dashers\.html(?:[?#]|$)/i.test(sourceUrl)
+    ) {
       networkRuntime = '<script src="' + escapeAttribute(resolveUrl("./neo-runner-network.js?v=20260831-chromebook-network-v1")) + '"><\/script>';
     }
     var injection = (hasAssetBase ? "" : '<base href="' + escapeAttribute(baseUrl) + '" target="_self">') +
@@ -114,7 +118,7 @@
       var html = result.html;
       if (activeLoads.get(frame) !== state) throw new DOMException("Frame load replaced.", "AbortError");
       if (!/<(?:!doctype|html|head|body)\b/i.test(html)) throw new Error("The requested file is not an HTML document.");
-      var prepared = prepareDocument(html, sourceUrl);
+      var prepared = prepareDocument(html, result.fetchedUrl || sourceUrl);
       state.controller = null;
       if ((options.forceBlob === true || prepared.length >= LARGE_DOCUMENT_BYTES) && typeof Blob === "function" && URL.createObjectURL) {
         state.objectUrl = URL.createObjectURL(new Blob([prepared], { type: "text/html;charset=utf-8" }));

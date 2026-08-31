@@ -11,6 +11,7 @@ let nativeFetches = 0;
 let createdMediaBlob = null;
 const mediaRanges = [];
 const fullSongBytes = Buffer.from("FULL-SONG-CONTENT");
+const gdSongBytes = Buffer.from("FULL-GEOMETRY-DASH-SONG");
 
 class MockURL extends URL {}
 MockURL.createObjectURL = blob => {
@@ -58,7 +59,7 @@ function emit(type, event) {
   for (const listener of listeners.get(type) || []) listener(event);
 }
 
-const parent = {
+const host = {
   postMessage(message) {
     messages.push(message);
     const request = message.request;
@@ -68,6 +69,20 @@ const parent = {
     if (request.url.includes("getGJLevels21.php")) {
       body = "1:Example level";
       headers = { "content-type": "text/plain" };
+    } else if (request.url.includes("getGJSongInfo.php")) {
+      body = "2~|~Full Test Song~|~10~|~https%3A%2F%2Fexample.com%2Fsong.mp3";
+      headers = { "content-type": "text/plain" };
+    } else if (request.url.includes("/audio-proxy")) {
+      const range = String(request.headers.range || "bytes=0-");
+      mediaRanges.push(range);
+      const start = Number((range.match(/bytes=(\d+)-/) || [])[1] || 0);
+      const bytes = gdSongBytes.subarray(start, Math.min(start + 8, gdSongBytes.length));
+      body = bytes;
+      status = 206;
+      headers = {
+        "content-type": "audio/mpeg",
+        "content-range": `bytes ${start}-${start + bytes.length - 1}/${gdSongBytes.length}`
+      };
     } else if (request.url.includes("/api/yt/astream/")) {
       const range = String(request.headers.range || "bytes=0-");
       mediaRanges.push(range);
@@ -92,7 +107,7 @@ const parent = {
       body = JSON.stringify({ tracks: [{ id: "full-track", duration: 263 }] });
     }
     queueMicrotask(() => emit("message", {
-      source: parent,
+      source: host,
       data: {
         type: "neo:network:response",
         id: message.id,
@@ -108,11 +123,13 @@ const parent = {
     }));
   }
 };
+const popup = { opener: host };
 
 const sandbox = {
   AbortController,
   Blob,
   DOMException,
+  Headers,
   Map,
   Request,
   Response,
@@ -129,7 +146,8 @@ const sandbox = {
     nativeFetches += 1;
     return new Response("native", { status: 200 });
   },
-  parent,
+  parent: popup,
+  top: popup,
   queueMicrotask,
   setTimeout
 };
@@ -159,6 +177,18 @@ vm.runInContext(source, context, { filename: sourcePath });
   assert.equal(await gd.text(), "1:Example level");
   assert.equal(Buffer.from(messages[1].request.bodyBase64, "base64").toString(), "str=featured&page=0");
 
+  const shortcutMessageCount = messages.length;
+  const shortcut = await context.fetch("https://fetchsongid.lasokar.workers.dev/?id=1372771");
+  assert.equal(shortcut.status, 200);
+  assert.deepEqual(Buffer.from(await shortcut.arrayBuffer()), gdSongBytes);
+  assert.ok(messages.length - shortcutMessageCount > 2, "the download button must assemble the complete song from ranges");
+
+  const gdAudio = await context.fetch(
+    "https://gd-proxy.gmdc.workers.dev/audio-proxy?url=https%3A%2F%2Fexample.com%2Fsong.mp3"
+  );
+  assert.equal(gdAudio.status, 200);
+  assert.deepEqual(Buffer.from(await gdAudio.arrayBuffer()), gdSongBytes);
+
   const cdn = await context.fetch("https://cdn.jsdelivr.net/npm/example/index.js");
   assert.equal(await cdn.text(), "native");
   assert.equal(nativeFetches, 1);
@@ -185,9 +215,10 @@ vm.runInContext(source, context, { filename: sourcePath });
     const fullUrl = `https://vcsa.huangqirui.xyz/api/yt/astream/${id}`;
     const beforeRequests = messages.length;
     guardedAudio.src = fullUrl;
-    await guardedAudio.play();
-    assert.equal(guardedAudio.src, fullUrl, `${id} relay data must fall back to the original full stream`);
+    await assert.rejects(guardedAudio.play(), /verified byte range|mismatched byte range|too large/);
+    assert.equal(guardedAudio.src, "", `${id} relay data must not be assigned to the player`);
     assert.equal(createdMediaBlob, null, `${id} relay data must never become a partial audio blob`);
+    assert.equal(guardedAudio.playCalls, 0, `${id} relay data must never start native playback`);
     if (id === "oversize") {
       assert.equal(messages.length - beforeRequests, 1, "oversize songs must reject before wasting Chromebook memory");
     }

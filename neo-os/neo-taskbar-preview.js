@@ -176,7 +176,7 @@
     }
     win.querySelectorAll("iframe").forEach(function (frame) {
       try {
-        frame.contentWindow.postMessage({ type: "neo-shell:set-muted", muted: muted }, window.location.origin);
+        frame.contentWindow.postMessage({ type: "neo-shell:set-muted", muted: muted }, "*");
       } catch (error) {}
     });
   }

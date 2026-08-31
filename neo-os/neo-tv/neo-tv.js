@@ -24,6 +24,19 @@
   }
   const originalAppendChild = Node.prototype.appendChild;
   const pictureInPicturePathStart = "M19 7h-8v6h8V7z";
+  let shellMuted = false;
+
+  const applyShellMute = () => {
+    document.querySelectorAll("audio, video").forEach((media) => {
+      media.muted = shellMuted;
+      media.defaultMuted = shellMuted;
+    });
+    document.querySelectorAll("iframe").forEach((frame) => {
+      try {
+        frame.contentWindow?.postMessage({ type: "neo-shell:set-muted", muted: shellMuted }, "*");
+      } catch (_error) {}
+    });
+  };
 
   const getPictureInPictureButton = () =>
     Array.from(document.querySelectorAll("button")).find((button) =>
@@ -148,6 +161,7 @@
     });
 
     syncPictureInPictureControl();
+    applyShellMute();
   };
 
   let cleanupQueued = false;
@@ -164,6 +178,12 @@
   window.addEventListener("DOMContentLoaded", () => {
     scheduleCleanup();
     observer.observe(document.documentElement, { childList: true, subtree: true });
+  });
+
+  window.addEventListener("message", (event) => {
+    if (!event.data || event.data.type !== "neo-shell:set-muted") return;
+    shellMuted = Boolean(event.data.muted);
+    applyShellMute();
   });
 
   document.addEventListener(

@@ -135,19 +135,21 @@
         if (!project || Number(project.width) < 1920 || Number(project.height) < 1080) return false;
         if (project.mediaType === "video") return /^\.\/assets\/wallpaper-engine-full\/.+\.(mp4|webm)$/i.test(String(project.file || ""));
         if (project.mediaType === "animated-image") return /^\.\/assets\/wallpaper-engine-full\/.+\.gif$/i.test(String(project.file || ""));
+        if (project.mediaType === "youtube") return /^[A-Za-z0-9_-]{11}$/.test(String(project.videoId || ""));
         return project.mediaType === "web" && /^\.\/assets\/wallpaper-engine-web\/[A-Za-z0-9_-]+\/.+\.html?(?:\?[^#]*)?$/i.test(String(project.file || ""));
       }).map(function (project, index) {
         var mediaType = String(project.mediaType || "video");
         return {
           id: String(project.id || "we-full-project-" + index),
           name: String(project.title || "Untitled wallpaper"),
-          type: mediaType === "web" ? "web" : (mediaType === "animated-image" ? "animated-image" : "video"),
+          type: mediaType === "web" ? "web" : (mediaType === "youtube" ? "youtube" : (mediaType === "animated-image" ? "animated-image" : "video")),
           mediaType: mediaType,
           sourceType: String(project.type || "scene"),
           author: project.sourceId ? "Steam Workshop" : "Wallpaper Engine",
           preview: String(project.preview || ""),
           file: String(project.file || ""),
-          mime: mediaType === "web" ? "text/html" : (mediaType === "animated-image" ? "image/gif" : (/\.webm$/i.test(String(project.file || "")) ? "video/webm" : "video/mp4")),
+          mime: mediaType === "web" || mediaType === "youtube" ? "text/html" : (mediaType === "animated-image" ? "image/gif" : (/\.webm$/i.test(String(project.file || "")) ? "video/webm" : "video/mp4")),
+          videoId: String(project.videoId || ""),
           size: Number(project.bytes) || 0,
           width: Number(project.width) || 0,
           height: Number(project.height) || 0,
@@ -204,7 +206,7 @@
   function qualityLabel(record) {
     if (isAnimatedPreview(record)) return "GIF";
     if (record && record.previewFallback) return "PREVIEW";
-    if (record && record.type === "web") return "LIVE";
+    if (record && (record.type === "web" || record.type === "youtube")) return "LIVE";
     return Number(record && record.width) >= 3840 && Number(record && record.height) >= 2160 ? "4K" : "1080P";
   }
 
@@ -774,6 +776,17 @@
     }
     if (activeMedia.tagName === "IFRAME") {
       var paused = shouldPause();
+      if (activeRecord && activeRecord.type === "youtube") {
+        activeMedia.style.visibility = document.hidden ? "hidden" : "visible";
+        var volume = Math.max(0, Math.min(100, Number(runtimeSettings.wallpaperVolume || 0)));
+        var muted = !audioUnlocked || runtimeSettings.wallpaperMuted !== false;
+        postYouTubeCommand(activeMedia, "setVolume", [volume]);
+        postYouTubeCommand(activeMedia, muted ? "mute" : "unMute");
+        postYouTubeCommand(activeMedia, paused ? "pauseVideo" : "playVideo");
+        root.dataset.wallpaperPlayback = paused ? "paused" : "playing";
+        emit("playback");
+        return;
+      }
       var webMotionReady = Boolean(webHealth && (webHealth.healthy || webFallbackFrame));
       activeMedia.style.visibility = document.hidden ? "hidden" : "visible";
       root.dataset.wallpaperPlayback = paused ? "paused" : (webMotionReady ? "playing" : "loading");
@@ -820,6 +833,58 @@
         }
       }
     }
+  }
+
+  function postYouTubeCommand(frame, command, args) {
+    if (!frame || !frame.contentWindow) return;
+    try {
+      frame.contentWindow.postMessage(JSON.stringify({
+        event: "command",
+        func: command,
+        args: Array.isArray(args) ? args : []
+      }), "*");
+    } catch (_error) {}
+  }
+
+  function youtubeEmbedUrl(record) {
+    var videoId = String(record && record.videoId || "");
+    if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return "";
+    return "https://www.youtube-nocookie.com/embed/" + videoId
+      + "?autoplay=1&mute=1&controls=0&disablekb=1&enablejsapi=1&fs=0&loop=1&modestbranding=1&playlist="
+      + encodeURIComponent(videoId) + "&playsinline=1&rel=0";
+  }
+
+  function mountYouTube(record, sequence, layer) {
+    clearMedia("switch");
+    activeId = record.id;
+    activeRecord = record;
+    root.dataset.wallpaperMedia = "true";
+    root.dataset.wallpaperPlayback = "loading";
+    layer.style.backgroundImage = record.preview ? 'url("' + record.preview + '")' : "";
+    layer.style.backgroundPosition = "center";
+    layer.style.backgroundSize = "cover";
+    var media = document.createElement("iframe");
+    media.title = record.name + " animated YouTube wallpaper";
+    media.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture");
+    media.setAttribute("allowfullscreen", "");
+    media.referrerPolicy = "strict-origin-when-cross-origin";
+    media.tabIndex = -1;
+    media.className = "wallpaper-media-asset wallpaper-youtube-asset";
+    enforceFullBleed(media, runtimeSettings.wallpaperFit || "cover");
+    media.addEventListener("load", function () {
+      if (sequence !== applySequence || activeMedia !== media) return;
+      layer.style.backgroundImage = "";
+      root.dataset.wallpaperPlayback = shouldPause() ? "paused" : "playing";
+      syncPlayback();
+      window.setTimeout(syncPlayback, 500);
+      emit("ready");
+    });
+    layer.appendChild(media);
+    activeMedia = media;
+    media.src = youtubeEmbedUrl(record);
+    syncPlayback();
+    emit("mount");
+    return Promise.resolve();
   }
 
   var previewRuntimePromise = null;
@@ -1070,6 +1135,7 @@
     }
     var layer = ensureLayer();
     if (!layer) return Promise.reject(new Error("The wallpaper surface is unavailable."));
+    if (record.type === "youtube") return mountYouTube(record, sequence, layer);
     if (record.type !== "web") {
       return prepareAssetMedia(record, sequence, layer).then(function (prepared) {
         commitPreparedMedia(record, sequence, prepared, layer);
@@ -1248,7 +1314,7 @@
     card.dataset.wallpaperType = record.type;
     card.dataset.wallpaperSourceType = record.sourceType || record.type;
     card.dataset.wallpaperAuthor = record.author || "Local library";
-    card.dataset.wallpaperCopy = (record.type === "web" ? "Original web-native animated wallpaper" : record.type === "video" ? qualityLabel(record) + " animated video" : record.type === "animated-image" || isAnimatedPreview(record) ? "Animated GIF wallpaper" : "Local image wallpaper") + " · " + readableSize(record.size);
+    card.dataset.wallpaperCopy = (record.type === "youtube" ? "Streaming animated YouTube wallpaper" : record.type === "web" ? "Original web-native animated wallpaper" : record.type === "video" ? qualityLabel(record) + " animated video" : record.type === "animated-image" || isAnimatedPreview(record) ? "Animated GIF wallpaper" : "Local image wallpaper") + (record.type === "youtube" ? "" : " · " + readableSize(record.size));
 
     if (record.online) {
       card.dataset.wallpaperCopy = record.previewFallback
@@ -1257,7 +1323,7 @@
     }
 
     if (record.bundled) {
-      card.dataset.wallpaperCopy = record.type === "web" ? "Original web-native animated Wallpaper Engine project" : qualityLabel(record) + " animated Wallpaper Engine project";
+      card.dataset.wallpaperCopy = record.type === "youtube" ? "Animated YouTube wallpaper · loops automatically" : record.type === "web" ? "Original web-native animated Wallpaper Engine project" : qualityLabel(record) + " animated Wallpaper Engine project";
     }
 
     var select = document.createElement("button");
@@ -1271,7 +1337,7 @@
     var previewUrl = urlFor(record, true);
     if (previewUrl) preview.style.backgroundImage = 'url("' + previewUrl + '")';
     if (record.online) preview.dataset.mediaBadge = isAnimatedPreview(record) ? "GIF" : (record.previewFallback ? "LIVE" : "SAVED");
-    else if (record.bundled) preview.dataset.mediaBadge = qualityLabel(record);
+    else if (record.bundled) preview.dataset.mediaBadge = record.type === "youtube" ? "YOUTUBE" : qualityLabel(record);
     else if (record.type === "video") preview.dataset.mediaBadge = "VIDEO";
     else if (record.type === "animated-image") preview.dataset.mediaBadge = "GIF";
 
@@ -1280,11 +1346,11 @@
     var title = document.createElement("strong");
     title.textContent = record.name;
     var detail = document.createElement("small");
-    detail.textContent = (record.type === "web" ? "Live web animation" : record.type === "video" ? qualityLabel(record) + " video" : record.type === "animated-image" ? "Full-resolution GIF" : "Image") + " · " + readableSize(record.size);
+    detail.textContent = record.type === "youtube" ? "YouTube · Animated" : (record.type === "web" ? "Live web animation" : record.type === "video" ? qualityLabel(record) + " video" : record.type === "animated-image" ? "Full-resolution GIF" : "Image") + " · " + readableSize(record.size);
     if (record.online) {
       detail.textContent = (isAnimatedPreview(record) ? "Animated GIF preview" : record.previewFallback ? "Animated web preview" : "Workshop " + String(record.sourceType || "media").replace(/\b\w/g, function (letter) { return letter.toUpperCase(); })) + " · " + readableSize(record.size);
     } else if (record.bundled) {
-      detail.textContent = (record.type === "web" ? "Original web project" : qualityLabel(record) + " video") + " · " + String(record.sourceType || "scene").replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
+      detail.textContent = (record.type === "youtube" ? "YouTube animation" : record.type === "web" ? "Original web project" : qualityLabel(record) + " video") + " · " + String(record.sourceType || "scene").replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
     }
     copy.append(title, detail);
     select.append(preview, copy);
@@ -1344,10 +1410,10 @@
       ready: root.dataset.wallpaperPlayback !== "loading" && root.dataset.wallpaperPlayback !== "error",
       playback: root.dataset.wallpaperPlayback || "idle",
       playing: root.dataset.wallpaperPlayback === "playing",
-      animationHealthy: activeMedia && activeMedia.tagName === "IFRAME" ? Boolean(webHealth && (webHealth.healthy || webFallbackFrame)) : root.dataset.wallpaperPlayback === "playing",
+      animationHealthy: activeRecord && activeRecord.type === "youtube" ? root.dataset.wallpaperPlayback === "playing" : activeMedia && activeMedia.tagName === "IFRAME" ? Boolean(webHealth && (webHealth.healthy || webFallbackFrame)) : root.dataset.wallpaperPlayback === "playing",
       animationMode: root.dataset.wallpaperWebAnimation || "native",
       mediaPriorityPaused: mediaPriorityPaused,
-      muted: activeMedia && activeMedia.tagName === "VIDEO" ? activeMedia.muted : true,
+      muted: activeRecord && activeRecord.type === "youtube" ? (!audioUnlocked || runtimeSettings.wallpaperMuted !== false) : activeMedia && activeMedia.tagName === "VIDEO" ? activeMedia.muted : true,
       libraryCount: visibleLibrary().length
     };
   }

@@ -3897,6 +3897,20 @@
     studio.dataset.onlinePage = "1";
     syncWallpaperCatalogControls(studio);
 
+    studio.querySelectorAll("[data-wallpaper-upload-trigger]").forEach(function (trigger) {
+      trigger.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        var input = document.getElementById(trigger.getAttribute("data-wallpaper-upload-trigger"));
+        if (!input || input.disabled) return;
+        input.value = "";
+        if (typeof input.showPicker === "function") {
+          try { input.showPicker(); return; } catch (_error) {}
+        }
+        input.click();
+      });
+    });
+
     studio.addEventListener("neo-wallpaper-library-change", function (event) {
       var result = event.detail;
       var record = result && result.record;
@@ -4568,7 +4582,7 @@
     var isBundled = Boolean(record && wallpaperEngine && wallpaperEngine.isBundled && wallpaperEngine.isBundled(selected));
     var isPreview = Boolean(record && record.previewFallback);
     var isCanvas = selected === "signal" || isPreview;
-    var isVideo = Boolean(record && record.type === "video");
+    var isVideo = Boolean(record && (record.type === "video" || record.type === "youtube"));
     var isWeb = Boolean(record && record.type === "web");
     var isAnimatedImage = Boolean(record && record.type === "animated-image");
     var selectedCard = studio.querySelector('[data-wallpaper-card="' + escapeSelector(selected) + '"]:not([hidden])');
@@ -4580,7 +4594,7 @@
       && selectedCard.getAttribute("data-wallpaper-preview-available") === "true");
     var canPause = isActive && (isCanvas || isVideo || isWeb || isAnimatedImage);
     var isPaused = Boolean(isActive && (state.playback === "paused" || state.playback === "blocked"));
-    var kind = isVideo ? "Video" : isAnimatedImage ? "Animated image" : isPreview ? "High-DPI animation" : isCanvas ? "Canvas animation" : isWeb ? "Live animation" : record ? "Local image" : isOnlinePreview ? "Web animation" : isOnlineAnimation ? "1080p animation" : "Static wallpaper";
+    var kind = record && record.type === "youtube" ? "YouTube animation" : isVideo ? "Video" : isAnimatedImage ? "Animated image" : isPreview ? "High-DPI animation" : isCanvas ? "Canvas animation" : isWeb ? "Live animation" : record ? "Local image" : isOnlinePreview ? "Web animation" : isOnlineAnimation ? "1080p animation" : "Static wallpaper";
     var runtime = studio.querySelector("[data-wallpaper-runtime-state]");
     var toggle = studio.querySelector('[data-wallpaper-command="toggle"]');
     var mute = studio.querySelector('[data-wallpaper-command="mute"]');

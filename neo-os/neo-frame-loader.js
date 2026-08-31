@@ -112,7 +112,7 @@
       if (!/<(?:!doctype|html|head|body)\b/i.test(html)) throw new Error("The requested file is not an HTML document.");
       var prepared = prepareDocument(html, sourceUrl);
       state.controller = null;
-      if (prepared.length >= LARGE_DOCUMENT_BYTES && typeof Blob === "function" && URL.createObjectURL) {
+      if ((options.forceBlob === true || prepared.length >= LARGE_DOCUMENT_BYTES) && typeof Blob === "function" && URL.createObjectURL) {
         state.objectUrl = URL.createObjectURL(new Blob([prepared], { type: "text/html;charset=utf-8" }));
         frame.removeAttribute("srcdoc");
         frame.src = state.objectUrl;

@@ -13,7 +13,7 @@
         <base id="neo-music-base" href="./" />
         <script>
             (() => {
-                const installUrl = new URL('./', window.location.href);
+                const installUrl = new URL('./', document.baseURI);
                 document.getElementById('neo-music-base').href = installUrl.href;
 
                 window.__AUTH_GATE__ = true;

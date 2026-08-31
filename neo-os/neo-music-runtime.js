@@ -368,6 +368,7 @@
       if (window.NEOFrameLoader) {
         window.NEOFrameLoader.load(frame, destination.href, {
           forceFetch: true,
+          forceBlob: true,
           cache: isRetry ? "no-store" : "force-cache"
         }).catch(function () {
           window.clearTimeout(slowTimer);

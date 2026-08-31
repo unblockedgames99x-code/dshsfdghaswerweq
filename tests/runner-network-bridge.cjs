@@ -23,10 +23,25 @@ class MockMediaElement {
   constructor() {
     this._src = "";
     this.loadCalls = 0;
+    this.playCalls = 0;
+    this.pauseCalls = 0;
   }
 
   load() {
     this.loadCalls += 1;
+  }
+
+  play() {
+    this.playCalls += 1;
+    return Promise.resolve();
+  }
+
+  pause() {
+    this.pauseCalls += 1;
+  }
+
+  removeAttribute(name) {
+    if (String(name).toLowerCase() === "src") this._src = "";
   }
 }
 
@@ -48,6 +63,7 @@ const parent = {
     messages.push(message);
     const request = message.request;
     let body = "";
+    let status = 200;
     let headers = { "content-type": "application/json" };
     if (request.url.includes("getGJLevels21.php")) {
       body = "1:Example level";
@@ -56,12 +72,22 @@ const parent = {
       const range = String(request.headers.range || "bytes=0-");
       mediaRanges.push(range);
       const start = Number((range.match(/bytes=(\d+)-/) || [])[1] || 0);
-      const bytes = fullSongBytes.subarray(start, Math.min(start + 7, fullSongBytes.length));
+      const bytes = request.url.endsWith("/partial")
+        ? Buffer.from("THIRTY-SECOND-PREVIEW")
+        : fullSongBytes.subarray(start, Math.min(start + 7, fullSongBytes.length));
       body = bytes;
-      headers = {
-        "content-type": "video/mp4",
-        "content-range": `bytes ${start}-${start + bytes.length - 1}/${fullSongBytes.length}`
-      };
+      if (request.url.endsWith("/partial")) {
+        status = 200;
+        headers = { "content-type": "video/mp4", "content-length": String(bytes.length) };
+      } else {
+        status = 206;
+        const rangeStart = request.url.endsWith("/malformed") ? start + 1 : start;
+        const rangeTotal = request.url.endsWith("/oversize") ? 49 * 1024 * 1024 : fullSongBytes.length;
+        headers = {
+          "content-type": "video/mp4",
+          "content-range": `bytes ${rangeStart}-${rangeStart + bytes.length - 1}/${rangeTotal}`
+        };
+      }
     } else {
       body = JSON.stringify({ tracks: [{ id: "full-track", duration: 263 }] });
     }
@@ -73,7 +99,7 @@ const parent = {
         payload: {
           ok: true,
           result: {
-            status: request.url.includes("/api/yt/astream/") ? 206 : 200,
+            status,
             headers,
             bodyBase64: Buffer.from(body).toString("base64")
           }
@@ -141,14 +167,39 @@ vm.runInContext(source, context, { filename: sourcePath });
 
   const audio = new MockAudioElement();
   audio.src = "https://vcsa.huangqirui.xyz/api/yt/astream/ae7AACP1-R0";
-  for (let attempt = 0; attempt < 20 && audio.src !== "blob:neo-full-song"; attempt += 1) {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
+  audio.load();
+  const playPromise = audio.play();
+  assert.equal(audio.loadCalls, 0, "the native player must wait for the complete relayed file");
+  assert.equal(audio.playCalls, 0, "playback must not start from an empty or partial source");
+  await playPromise;
   assert.equal(audio.src, "blob:neo-full-song");
   assert.ok(mediaRanges.length > 1, "full songs must continue requesting ranges until complete");
   assert.equal(createdMediaBlob.size, fullSongBytes.length);
   assert.deepEqual(Buffer.from(await createdMediaBlob.arrayBuffer()), fullSongBytes);
   assert.equal(audio.loadCalls, 1);
+  assert.equal(audio.playCalls, 1);
+
+  for (const id of ["partial", "malformed", "oversize"]) {
+    createdMediaBlob = null;
+    const guardedAudio = new MockAudioElement();
+    const fullUrl = `https://vcsa.huangqirui.xyz/api/yt/astream/${id}`;
+    const beforeRequests = messages.length;
+    guardedAudio.src = fullUrl;
+    await guardedAudio.play();
+    assert.equal(guardedAudio.src, fullUrl, `${id} relay data must fall back to the original full stream`);
+    assert.equal(createdMediaBlob, null, `${id} relay data must never become a partial audio blob`);
+    if (id === "oversize") {
+      assert.equal(messages.length - beforeRequests, 1, "oversize songs must reject before wasting Chromebook memory");
+    }
+  }
+
+  createdMediaBlob = null;
+  const cancelledAudio = new MockAudioElement();
+  cancelledAudio.src = "https://vcsa.huangqirui.xyz/api/yt/astream/cancel";
+  cancelledAudio.removeAttribute("src");
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(cancelledAudio.src, "");
+  assert.equal(createdMediaBlob, null, "a discarded song must not be restored after its download finishes");
 
   console.log("Google runner bridge routes full Music tracks and Geometry Dash safely.");
 })().catch((error) => {

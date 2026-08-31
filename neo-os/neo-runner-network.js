@@ -174,21 +174,34 @@
         signal: signal
       });
       if (!response.ok) throw new Error("Music relay returned HTTP " + response.status + ".");
+      if (response.status !== 206) throw new Error("Music relay did not return a verified byte range.");
       contentType = response.headers.get("content-type") || contentType;
       var bytes = new Uint8Array(await response.arrayBuffer());
-      chunks.push(bytes);
-
       var range = response.headers.get("content-range");
-      var match = range && range.match(/bytes\s+\d+-\d+\/(\d+)/i);
-      if (match) total = Number(match[1]);
-      if (response.status !== 206 || !bytes.length) {
-        total = start + bytes.length;
-        break;
+      var match = range && range.match(/bytes\s+(\d+)-(\d+)\/(\d+)/i);
+      if (!match) throw new Error("Music relay returned an invalid byte range.");
+      var rangeStart = Number(match[1]);
+      var rangeEnd = Number(match[2]);
+      var rangeTotal = Number(match[3]);
+      if (
+        !Number.isSafeInteger(rangeStart) ||
+        !Number.isSafeInteger(rangeEnd) ||
+        !Number.isSafeInteger(rangeTotal) ||
+        rangeStart !== start ||
+        rangeEnd < rangeStart ||
+        rangeEnd >= rangeTotal ||
+        bytes.length !== rangeEnd - rangeStart + 1
+      ) {
+        throw new Error("Music relay returned a mismatched byte range.");
       }
-      start += bytes.length;
+      if (rangeTotal > MAX_MEDIA_BYTES) throw new Error("This song is too large for the Chromebook relay.");
+      if (total !== null && total !== rangeTotal) throw new Error("Music relay changed the song length during download.");
+      total = rangeTotal;
+      chunks.push(bytes);
+      start = rangeEnd + 1;
     }
 
-    if (total !== null && total > MAX_MEDIA_BYTES) throw new Error("This song is too large for the Chromebook relay.");
+    if (total === null || start !== total) throw new Error("Music relay did not return the complete song.");
     return new Blob(chunks, { type: contentType });
   }
 
@@ -196,6 +209,9 @@
     if (typeof HTMLMediaElement !== "function" || typeof HTMLAudioElement !== "function") return;
     var descriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
     var nativeLoad = HTMLMediaElement.prototype.load;
+    var nativePlay = HTMLMediaElement.prototype.play;
+    var nativePause = HTMLMediaElement.prototype.pause;
+    var nativeRemoveAttribute = HTMLMediaElement.prototype.removeAttribute;
     if (!descriptor || !descriptor.get || !descriptor.set || descriptor.configurable === false) return;
 
     var state = new WeakMap();
@@ -221,22 +237,59 @@
         }
 
         var element = this;
-        var current = { controller: new AbortController(), objectUrl: "" };
+        var current = {
+          controller: new AbortController(),
+          objectUrl: "",
+          pending: true,
+          playRequested: false,
+          ready: null
+        };
         state.set(element, current);
         descriptor.set.call(element, "");
-        downloadRelayedMedia(target, current.controller.signal).then(function (blob) {
+        current.ready = downloadRelayedMedia(target, current.controller.signal).then(function (blob) {
           if (state.get(element) !== current) return;
           current.objectUrl = URL.createObjectURL(blob);
+          current.pending = false;
           descriptor.set.call(element, current.objectUrl);
           nativeLoad.call(element);
         }).catch(function () {
           if (state.get(element) !== current) return;
-          state.delete(element);
+          current.pending = false;
           descriptor.set.call(element, target.href);
           nativeLoad.call(element);
         });
       }
     });
+
+    HTMLMediaElement.prototype.load = function () {
+      var current = state.get(this);
+      if (current && current.pending) return;
+      return nativeLoad.call(this);
+    };
+
+    HTMLMediaElement.prototype.play = function () {
+      var element = this;
+      var current = state.get(element);
+      if (!current || !current.pending) return nativePlay.call(element);
+      current.playRequested = true;
+      return current.ready.then(function () {
+        if (state.get(element) !== current || !current.playRequested) {
+          throw new DOMException("Playback was cancelled.", "AbortError");
+        }
+        return nativePlay.call(element);
+      });
+    };
+
+    HTMLMediaElement.prototype.pause = function () {
+      var current = state.get(this);
+      if (current && current.pending) current.playRequested = false;
+      return nativePause.call(this);
+    };
+
+    HTMLMediaElement.prototype.removeAttribute = function (name) {
+      if (String(name || "").toLowerCase() === "src") clear(this);
+      return nativeRemoveAttribute.call(this, name);
+    };
   }
 
   installMediaRelay();

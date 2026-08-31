@@ -246,8 +246,39 @@
       }
     }
 
+    function relayFrameState(frameState) {
+      if (!frameState || typeof frameState !== "object") return;
+      var active = frameState.active !== false && Boolean(String(frameState.title || "").trim());
+      window.dispatchEvent(new CustomEvent("neo-media-state", {
+        detail: active ? {
+          source: sourceId,
+          appId: "stream",
+          active: true,
+          playing: frameState.playing === true,
+          title: String(frameState.title || "Music").slice(0, 160),
+          subtitle: String(frameState.subtitle || "").slice(0, 180),
+          cover: String(frameState.cover || "").slice(0, 4096),
+          kind: frameState.kind === "video" ? "video" : "audio",
+          position: Math.max(0, Number(frameState.position) || 0),
+          duration: Math.max(0, Number(frameState.duration) || 0),
+          volume: Math.max(0, Math.min(1, Number(frameState.volume) || 0)),
+          muted: frameState.muted === true,
+          volumeControl: false,
+          transport: false,
+          pauseWallpaper: false
+        } : { source: sourceId, appId: "stream", active: false }
+      }));
+    }
+
     function onMessage(event) {
-      if (event.source === frame.contentWindow && event.data && event.data.sbMusic) handle(event.data.sbMusic);
+      if (event.source !== frame.contentWindow || !event.data || typeof event.data !== "object") return;
+      if (event.data.sbMusic) handle(event.data.sbMusic);
+      if (event.data.neoMusicState) relayFrameState(event.data.neoMusicState);
+      if (event.data.neoMusicLevels && Array.isArray(event.data.neoMusicLevels.values)) {
+        window.dispatchEvent(new CustomEvent("neo-media-levels", {
+          detail: { source: sourceId, levels: event.data.neoMusicLevels.values }
+        }));
+      }
     }
 
     function onVolume(event) {

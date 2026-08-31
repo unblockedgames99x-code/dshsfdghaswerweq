@@ -90,7 +90,7 @@
     var signature = JSON.stringify(state);
     if (!force && signature === lastSignature) return;
     lastSignature = signature;
-    try { window.parent.postMessage({ neoMusicState: state }, window.location.origin); } catch (error) {}
+    try { window.parent.postMessage({ neoMusicState: state }, "*"); } catch (error) {}
   }
 
   function postLevels() {
@@ -100,7 +100,7 @@
       var wave = Math.sin((state.position * 4.2) + (index * 1.37));
       values.push(state.playing ? 0.22 + (Math.abs(wave) * 0.72) : 0);
     }
-    try { window.parent.postMessage({ neoMusicLevels: { values: values } }, window.location.origin); } catch (error) {}
+    try { window.parent.postMessage({ neoMusicLevels: { values: values } }, "*"); } catch (error) {}
   }
 
   function click(selector) {
@@ -191,7 +191,7 @@
   }
 
   window.addEventListener("message", function (event) {
-    if (event.source !== window.parent || event.origin !== window.location.origin) return;
+    if (event.source !== window.parent) return;
     if (event.data && event.data.neoMusicControl) handleControl(event.data.neoMusicControl);
   });
 

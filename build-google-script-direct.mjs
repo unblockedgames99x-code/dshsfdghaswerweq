@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 
 const sourcePath = new URL("./neo-os/index.html", import.meta.url);
 const outputPath = new URL("./google-script-direct.html", import.meta.url);
-const revision = "85d2dc6";
+const revision = "ee0d3c8";
 const cdnRoot = `https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@${revision}/neo-os/`;
 const pageRoot = cdnRoot;
 

@@ -26,6 +26,90 @@
   z-index: 50;
 }
 
+.neo-snap-layouts {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 8px);
+  right: 34px;
+  width: max-content;
+  display: flex;
+  gap: 6px;
+  padding: 9px;
+  color: #fff;
+  background: #181818;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.68);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-5px) scale(0.98);
+  transform-origin: top right;
+  transition: opacity 140ms ease, transform 140ms ease, visibility 0s linear 140ms;
+}
+
+.neo-snap-layouts.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+
+.window-control.fullscreen:hover ~ .neo-snap-layouts,
+.window-control.fullscreen:focus ~ .neo-snap-layouts {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+
+.neo-snap-template {
+  position: relative;
+  width: 48px;
+  height: 58px;
+  display: block;
+  flex: 0 0 48px;
+  overflow: hidden;
+  background: #222;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+}
+
+.neo-snap-zone {
+  position: absolute;
+  left: calc(var(--snap-x) + 2px);
+  top: calc(var(--snap-y) + 2px);
+  width: calc(var(--snap-width) - 4px);
+  height: calc(var(--snap-height) - 4px);
+  min-width: 5px;
+  min-height: 5px;
+  padding: 0;
+  background: #3a3a3a;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 110ms ease, border-color 110ms ease, box-shadow 110ms ease;
+}
+
+.neo-snap-zone:hover,
+.neo-snap-zone:focus-visible {
+  z-index: 2;
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22);
+  outline: 0;
+}
+
+.neo-window.is-snapped {
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 6px;
+  resize: none !important;
+  transition: opacity 170ms ease, left 170ms ease, top 170ms ease, width 170ms ease, height 170ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
 .window-resize-handle[data-window-resize="n"],
 .window-resize-handle[data-window-resize="s"] {
   right: 18px;
@@ -92,6 +176,7 @@
 }
 
 .neo-window.is-maximized .window-resize-handle,
+.neo-window.is-snapped .window-resize-handle,
 .neo-window.is-tab-fullscreen .window-resize-handle,
 .neo-window.is-minimized .window-resize-handle {
   display: none;
@@ -107,6 +192,32 @@ html.has-tab-fullscreen .widget-layer,
 html.has-tab-fullscreen .rainmeter-clock {
   opacity: 0;
   pointer-events: none;
+}
+
+html.has-window-snap-mode .taskbar {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html.has-window-snap-mode .neo-taskbar-preview,
+html.has-window-snap-mode .neo-minimized-tray,
+html.has-window-snap-mode .neo-taskbar-menu {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+@media (min-width: 701px) {
+  html.has-window-snap-mode .taskbar {
+    transform: translate(-130%, -50%) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  html.has-window-snap-mode .taskbar {
+    transform: translateY(130%) !important;
+  }
 }
 
 .neo-window.is-tab-fullscreen {
@@ -137,6 +248,7 @@ html.is-resizing-window iframe {
 
 @media (max-width: 720px) {
   .window-resize-handle { display: none; }
+  .neo-snap-layouts { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

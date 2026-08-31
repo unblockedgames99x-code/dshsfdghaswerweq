@@ -8,6 +8,55 @@
   var active = null;
   var resizeFrame = 0;
   var tabFullscreenWindow = null;
+  var openSnapPanel = null;
+  var snapOpenTimer = 0;
+  var snapCloseTimer = 0;
+  var snapPlacements = {
+    "left-half": [0, 0, 0.5, 1],
+    "right-half": [0.5, 0, 0.5, 1],
+    "left-wide": [0, 0, 0.66, 1],
+    "right-third": [0.66, 0, 0.34, 1],
+    "left-third": [0, 0, 0.34, 1],
+    "center-third": [0.34, 0, 0.32, 1],
+    "right-third-equal": [0.66, 0, 0.34, 1],
+    "left-wide-stack": [0, 0, 0.66, 1],
+    "right-top": [0.66, 0, 0.34, 0.5],
+    "right-bottom": [0.66, 0.5, 0.34, 0.5],
+    "left-top": [0, 0, 0.34, 0.5],
+    "left-bottom": [0, 0.5, 0.34, 0.5],
+    "right-wide-stack": [0.34, 0, 0.66, 1],
+    "quarter-top-left": [0, 0, 0.5, 0.5],
+    "quarter-top-right": [0.5, 0, 0.5, 0.5],
+    "quarter-bottom-left": [0, 0.5, 0.5, 0.5],
+    "quarter-bottom-right": [0.5, 0.5, 0.5, 0.5]
+  };
+  var snapLayouts = [
+    ["left-half", "right-half"],
+    ["left-wide", "right-third"],
+    ["left-third", "center-third", "right-third-equal"],
+    ["left-wide-stack", "right-top", "right-bottom"],
+    ["left-top", "left-bottom", "right-wide-stack"],
+    ["quarter-top-left", "quarter-top-right", "quarter-bottom-left", "quarter-bottom-right"]
+  ];
+  var snapLabels = {
+    "left-half": "left half",
+    "right-half": "right half",
+    "left-wide": "left two thirds",
+    "right-third": "right third",
+    "left-third": "left third",
+    "center-third": "center third",
+    "right-third-equal": "right third",
+    "left-wide-stack": "left two thirds",
+    "right-top": "upper right",
+    "right-bottom": "lower right",
+    "left-top": "upper left",
+    "left-bottom": "lower left",
+    "right-wide-stack": "right two thirds",
+    "quarter-top-left": "upper left quarter",
+    "quarter-top-right": "upper right quarter",
+    "quarter-bottom-left": "lower left quarter",
+    "quarter-bottom-right": "lower right quarter"
+  };
 
   function clamp(value, minimum, maximum) {
     return Math.min(Math.max(value, minimum), maximum);
@@ -38,6 +87,156 @@
     button.title = active ? "Exit fullscreen (Esc)" : "Fullscreen (Ctrl+B)";
   }
 
+  function syncSnapTaskbar() {
+    var snapped = layer.querySelector(".neo-window.is-snapped.is-open:not(.is-minimized)");
+    document.documentElement.classList.toggle("has-window-snap-mode", Boolean(snapped));
+  }
+
+  function hideSnapLayouts() {
+    window.clearTimeout(snapOpenTimer);
+    window.clearTimeout(snapCloseTimer);
+    snapOpenTimer = 0;
+    snapCloseTimer = 0;
+    if (!openSnapPanel) return;
+    openSnapPanel.classList.remove("is-open");
+    openSnapPanel.setAttribute("aria-hidden", "true");
+    openSnapPanel = null;
+  }
+
+  function showSnapLayouts(panel) {
+    if (!panel || smallScreen()) return;
+    window.clearTimeout(snapOpenTimer);
+    window.clearTimeout(snapCloseTimer);
+    if (openSnapPanel && openSnapPanel !== panel) {
+      openSnapPanel.classList.remove("is-open");
+      openSnapPanel.setAttribute("aria-hidden", "true");
+    }
+    openSnapPanel = panel;
+    panel.classList.add("is-open");
+    panel.setAttribute("aria-hidden", "false");
+  }
+
+  function scheduleSnapLayouts(panel) {
+    window.clearTimeout(snapCloseTimer);
+    window.clearTimeout(snapOpenTimer);
+    snapOpenTimer = window.setTimeout(function () { showSnapLayouts(panel); }, 280);
+  }
+
+  function scheduleSnapClose() {
+    window.clearTimeout(snapOpenTimer);
+    window.clearTimeout(snapCloseTimer);
+    snapCloseTimer = window.setTimeout(hideSnapLayouts, 240);
+  }
+
+  function restoreSnappedWindow(win) {
+    if (!win || !win.classList.contains("is-snapped")) return false;
+    var restore = win._neoSnapRestore;
+    win.classList.remove("is-snapped");
+    win.removeAttribute("data-snap-placement");
+    if (restore) {
+      win.style.left = restore.left;
+      win.style.top = restore.top;
+      win.style.width = restore.width;
+      win.style.height = restore.height;
+      win._neoSnapRestore = null;
+    }
+    syncSnapTaskbar();
+    win.dispatchEvent(new CustomEvent("neo-window-resized"));
+    return true;
+  }
+
+  function snapWindow(win, placementName) {
+    var placement = snapPlacements[placementName];
+    if (!win || !placement || smallScreen()) return;
+    if (!win._neoSnapRestore) {
+      win._neoSnapRestore = {
+        left: win.style.left,
+        top: win.style.top,
+        width: win.style.width,
+        height: win.style.height
+      };
+    }
+
+    win.classList.remove("is-maximized");
+    var bounds = layer.getBoundingClientRect();
+    var outer = 7;
+    var gutter = 6;
+    var usableWidth = Math.max(1, bounds.width - outer * 2);
+    var usableHeight = Math.max(1, bounds.height - outer * 2);
+    var x = placement[0];
+    var y = placement[1];
+    var width = placement[2];
+    var height = placement[3];
+    var leftInset = x > 0 ? gutter / 2 : 0;
+    var rightInset = x + width < 0.999 ? gutter / 2 : 0;
+    var topInset = y > 0 ? gutter / 2 : 0;
+    var bottomInset = y + height < 0.999 ? gutter / 2 : 0;
+
+    win.style.left = Math.round(outer + usableWidth * x + leftInset) + "px";
+    win.style.top = Math.round(outer + usableHeight * y + topInset) + "px";
+    win.style.width = Math.round(usableWidth * width - leftInset - rightInset) + "px";
+    win.style.height = Math.round(usableHeight * height - topInset - bottomInset) + "px";
+    win.classList.add("is-snapped");
+    win.dataset.snapPlacement = placementName;
+    document.documentElement.classList.add("has-window-snap-mode");
+    hideSnapLayouts();
+    win.focus({ preventScroll: true });
+    win.dispatchEvent(new CustomEvent("neo-window-snapped", { detail: { placement: placementName } }));
+  }
+
+  function createSnapLayouts(win, controls, trigger) {
+    var panel = document.createElement("div");
+    panel.className = "neo-snap-layouts";
+    panel.setAttribute("role", "group");
+    panel.setAttribute("aria-label", "Window snap layouts");
+    panel.setAttribute("aria-hidden", "true");
+
+    snapLayouts.forEach(function (layout, layoutIndex) {
+      var group = document.createElement("span");
+      group.className = "neo-snap-template";
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", "Layout " + (layoutIndex + 1));
+      layout.forEach(function (placementName) {
+        var placement = snapPlacements[placementName];
+        var zone = document.createElement("button");
+        zone.type = "button";
+        zone.className = "neo-snap-zone";
+        zone.dataset.snapPlacement = placementName;
+        zone.setAttribute("aria-label", "Snap window to " + snapLabels[placementName]);
+        zone.style.setProperty("--snap-x", placement[0] * 100 + "%");
+        zone.style.setProperty("--snap-y", placement[1] * 100 + "%");
+        zone.style.setProperty("--snap-width", placement[2] * 100 + "%");
+        zone.style.setProperty("--snap-height", placement[3] * 100 + "%");
+        group.appendChild(zone);
+      });
+      panel.appendChild(group);
+    });
+
+    trigger.title = "Fullscreen and snap layouts";
+    trigger.addEventListener("pointerenter", function () { scheduleSnapLayouts(panel); });
+    trigger.addEventListener("pointerleave", scheduleSnapClose);
+    trigger.addEventListener("focus", function () { showSnapLayouts(panel); });
+    panel.addEventListener("pointerenter", function () {
+      window.clearTimeout(snapCloseTimer);
+      window.clearTimeout(snapOpenTimer);
+    });
+    panel.addEventListener("pointerleave", scheduleSnapClose);
+    panel.addEventListener("focusin", function () { showSnapLayouts(panel); });
+    panel.addEventListener("focusout", function () {
+      window.setTimeout(function () {
+        if (!panel.contains(document.activeElement) && document.activeElement !== trigger) scheduleSnapClose();
+      }, 0);
+    });
+    panel.addEventListener("click", function (event) {
+      var zone = event.target.closest("[data-snap-placement]");
+      if (!zone) return;
+      event.preventDefault();
+      event.stopPropagation();
+      snapWindow(win, zone.dataset.snapPlacement);
+    });
+    controls.appendChild(panel);
+  }
+
   function attach(win) {
     if (!win || win.dataset.resizeReady === "true") return;
     win.dataset.resizeReady = "true";
@@ -56,6 +255,9 @@
       }
       win.appendChild(handle);
     });
+    var controls = win.querySelector(".window-controls");
+    var fullscreen = controls && controls.querySelector('[data-window-action="fullscreen"]');
+    if (controls && fullscreen) createSnapLayouts(win, controls, fullscreen);
   }
 
   function scan(node) {
@@ -86,6 +288,21 @@
     win.classList.add("is-resizing");
     document.documentElement.classList.add("is-resizing-window");
     event.preventDefault();
+  }
+
+  function leaveSnapForWindowAction(event) {
+    var action = event.target.closest("[data-window-action]");
+    if (!action) return;
+    var win = action.closest(".neo-window");
+    if (!win || !win.classList.contains("is-snapped")) return;
+    restoreSnappedWindow(win);
+  }
+
+  function leaveSnapForDrag(event) {
+    if (event.button !== 0 || event.target.closest("button")) return;
+    var chrome = event.target.closest(".neo-window.is-snapped > .window-chrome");
+    if (!chrome) return;
+    restoreSnappedWindow(chrome.closest(".neo-window"));
   }
 
   function paintResize() {
@@ -205,6 +422,19 @@
     if (event.key === "Escape" && tabFullscreenWindow) {
       event.preventDefault();
       leaveTabFullscreen(true);
+      return;
+    }
+    if (event.key === "Escape" && openSnapPanel) {
+      event.preventDefault();
+      hideSnapLayouts();
+      return;
+    }
+    if (event.key === "Escape") {
+      var snapped = activeWindow();
+      if (snapped && snapped.classList.contains("is-snapped")) {
+        event.preventDefault();
+        restoreSnappedWindow(snapped);
+      }
     }
   }
 
@@ -214,6 +444,7 @@
     var win = button.closest(".neo-window");
     if (!win) return;
     event.preventDefault();
+    hideSnapLayouts();
     if (tabFullscreenWindow === win) leaveTabFullscreen(true);
     else enterTabFullscreen(win);
   }
@@ -226,16 +457,22 @@
   }
 
   document.addEventListener("pointerdown", beginResize);
+  document.addEventListener("pointerdown", leaveSnapForDrag, true);
   document.addEventListener("pointermove", moveResize);
   document.addEventListener("pointerup", endResize);
   document.addEventListener("pointercancel", endResize);
   document.addEventListener("keydown", keyboardResize);
   document.addEventListener("keydown", handleTabFullscreenShortcut, true);
+  document.addEventListener("click", leaveSnapForWindowAction, true);
   document.addEventListener("click", handleFullscreenButton);
+  document.addEventListener("pointerdown", function (event) {
+    if (openSnapPanel && !event.target.closest(".neo-snap-layouts, [data-window-action='fullscreen']")) hideSnapLayouts();
+  }, true);
 
   scan(layer);
   new MutationObserver(function (records) {
     records.forEach(function (record) { record.addedNodes.forEach(scan); });
     syncTabFullscreen();
+    syncSnapTaskbar();
   }).observe(layer, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
 })();

@@ -61,6 +61,13 @@
       var parsed = new URL(sourceUrl);
       var match = parsed.pathname.match(/^\/gh\/([^/]+)\/([^/@]+)@([^/]+)\/(.+)$/);
       if (/\.jsdelivr\.net$/i.test(parsed.hostname) && match) {
+        ["fastly.jsdelivr.net", "gcore.jsdelivr.net"].forEach(function (hostname) {
+          if (hostname !== parsed.hostname) {
+            var mirror = new URL(parsed.href);
+            mirror.hostname = hostname;
+            candidates.push(mirror.href);
+          }
+        });
         var rawUrl = "https://raw.githubusercontent.com/" + match.slice(1).join("/");
         candidates.push(rawUrl);
       }
@@ -118,7 +125,7 @@
       var html = result.html;
       if (activeLoads.get(frame) !== state) throw new DOMException("Frame load replaced.", "AbortError");
       if (!/<(?:!doctype|html|head|body)\b/i.test(html)) throw new Error("The requested file is not an HTML document.");
-      var prepared = prepareDocument(html, result.fetchedUrl || sourceUrl);
+      var prepared = prepareDocument(html, sourceUrl);
       state.controller = null;
       if ((options.forceBlob === true || prepared.length >= LARGE_DOCUMENT_BYTES) && typeof Blob === "function" && URL.createObjectURL) {
         state.objectUrl = URL.createObjectURL(new Blob([prepared], { type: "text/html;charset=utf-8" }));

@@ -43,6 +43,8 @@ const browser = sandbox.NEOFrameLoader.prepare(
   "https://cdn.jsdelivr.net/gh/example/repo@commit/neo-os/NEO-BROWSER/index.html"
 );
 assert.doesNotMatch(browser, /neo-runner-network\.js/);
-assert.match(source, /prepareDocument\(html, result\.fetchedUrl \|\| sourceUrl\)/);
+assert.match(source, /prepareDocument\(html, sourceUrl\)/);
+assert.match(source, /fastly\.jsdelivr\.net/);
+assert.match(source, /gcore\.jsdelivr\.net/);
 
 console.log("Frame loader installs each nested network runtime exactly once.");

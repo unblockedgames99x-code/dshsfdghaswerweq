@@ -107,16 +107,18 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
 </head>
   <body>
 
+<? if (!launchMode) { ?>
 <div id="neo-direct-boot" role="dialog" aria-label="Launch NEO OS">
   <div class="neo-direct-card">
     <div class="neo-direct-actions">
-      <a class="neo-direct-action" id="neo-open-blank" href="https://script.google.com/macros/s/AKfycbw1GQonlgNW6_ZwgRWRPn2N1pvT4gyH7Z3ykSeMYqR9dZ0wgMOVGDw9ObLdW8MKKCeSkA/exec#neo-desktop" target="_blank" rel="noopener">Open in about:blank</a>
-      <a class="neo-direct-action" id="neo-fullscreen" href="#neo-desktop">Full screen</a>
+      <a class="neo-direct-action" id="neo-open-blank" href="https://script.google.com/macros/s/AKfycbw1GQonlgNW6_ZwgRWRPn2N1pvT4gyH7Z3ykSeMYqR9dZ0wgMOVGDw9ObLdW8MKKCeSkA/exec?launch=1" target="_blank" rel="noopener">Open in about:blank</a>
+      <a class="neo-direct-action" id="neo-fullscreen" href="https://script.google.com/macros/s/AKfycbw1GQonlgNW6_ZwgRWRPn2N1pvT4gyH7Z3ykSeMYqR9dZ0wgMOVGDw9ObLdW8MKKCeSkA/exec?launch=1" target="_top">Full screen</a>
     </div>
     <p id="neo-direct-status" aria-live="polite">Choose how to launch NEO OS</p>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@8ae4f69/neo-os/neo-direct-launch.js?v=20260830-google-boot-v4"></script>
+<? } ?>
     <a class="skip-link" href="#neo-desktop">Skip to desktop</a>
 
     <svg class="icon-sprite" aria-hidden="true">

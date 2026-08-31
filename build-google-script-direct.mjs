@@ -31,16 +31,18 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
 html = html.replace(/<\/head>/i, `${bootStyle}\n</head>`);
 
 const bootBody = String.raw`
+<? if (!launchMode) { ?>
 <div id="neo-direct-boot" role="dialog" aria-label="Launch NEO OS">
   <div class="neo-direct-card">
     <div class="neo-direct-actions">
-      <a class="neo-direct-action" id="neo-open-blank" href="${publicWebApp}#neo-desktop" target="_blank" rel="noopener">Open in about:blank</a>
-      <a class="neo-direct-action" id="neo-fullscreen" href="#neo-desktop">Full screen</a>
+      <a class="neo-direct-action" id="neo-open-blank" href="${publicWebApp}?launch=1" target="_blank" rel="noopener">Open in about:blank</a>
+      <a class="neo-direct-action" id="neo-fullscreen" href="${publicWebApp}?launch=1" target="_top">Full screen</a>
     </div>
     <p id="neo-direct-status" aria-live="polite">Choose how to launch NEO OS</p>
   </div>
 </div>
-<script src="${cdnRoot}neo-direct-launch.js?v=20260830-google-boot-v4"></script>`;
+<script src="${cdnRoot}neo-direct-launch.js?v=20260830-google-boot-v4"></script>
+<? } ?>`;
 
 html = html.replace(/<body([^>]*)>/i, `<body$1>\n${bootBody}`);
 await writeFile(outputPath, html, "utf8");

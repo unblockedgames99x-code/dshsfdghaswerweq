@@ -25,13 +25,30 @@
         const query = String(request.searchParams.get('q') || '').trim();
         const callback = String(request.searchParams.get('callback') || '');
         const target = `${searchOrigin}/api/music/search?q=${encodeURIComponent(query)}`;
-        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+        const encodedTarget = encodeURIComponent(target);
+        const proxies = [
+            {
+                url: `https://api.allorigins.win/raw?url=${encodedTarget}`,
+                read: (response) => response.json()
+            },
+            {
+                url: `https://api.allorigins.win/get?url=${encodedTarget}`,
+                read: (response) => response.json().then((result) => JSON.parse(result.contents || '{}'))
+            }
+        ];
 
-        fetch(proxy, { cache: 'no-store' })
-            .then((response) => {
-                if (!response.ok) throw new Error(`Search failed: ${response.status}`);
-                return response.json();
-            })
+        const fetchSearch = (index = 0) => {
+            if (index >= proxies.length) return Promise.reject(new Error('Search is unavailable'));
+            const current = proxies[index];
+            return fetch(current.url, { cache: 'no-store' })
+                .then((response) => {
+                    if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+                    return current.read(response);
+                })
+                .catch(() => fetchSearch(index + 1));
+        };
+
+        fetchSearch()
             .then((payload) => {
                 if (typeof window[callback] === 'function') window[callback](payload);
             })

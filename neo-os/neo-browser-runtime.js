@@ -1465,6 +1465,8 @@
           window.NEOFrameLoader.load(tab.frame, tab.destination, { forceFetch: true }).catch((error) => {
             if (tab.navigationId === navigationId) showTransportFailure(tab, error);
           });
+        } else if (document.querySelector('meta[name="neo-runner"]')) {
+          showTransportFailure(tab, new Error("The internal app loader is not ready."));
         } else {
           tab.frame.src = tab.destination;
         }

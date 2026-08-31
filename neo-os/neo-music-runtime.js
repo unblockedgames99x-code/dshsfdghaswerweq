@@ -377,7 +377,11 @@
           retry.hidden = false;
         });
       } else {
-        frame.src = destination.href;
+        session.classList.add("is-slow");
+        loader.querySelector("strong").textContent = "Music loader unavailable";
+        loader.querySelector("p").textContent = "Retry after NEO OS finishes loading.";
+        retry.hidden = false;
+        return;
       }
       slowTimer = window.setTimeout(function () {
         if (session.classList.contains("is-ready")) return;

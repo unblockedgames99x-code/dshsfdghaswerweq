@@ -35,6 +35,7 @@
   var audioUnlocked = false;
   var mediaPriorityPaused = false;
   var initialized = false;
+  var YOUTUBE_CHROME_CROP = 96;
   var runtimeSettings = {
     wallpaperFit: "cover",
     wallpaperMuted: true,
@@ -506,10 +507,14 @@
 
   function enforceFullBleed(media, fit) {
     if (!media) return;
+    var cleanYouTubeFrame = media.tagName === "IFRAME"
+      && media.classList.contains("wallpaper-youtube-asset");
     media.style.position = "absolute";
-    media.style.inset = "0";
+    media.style.inset = cleanYouTubeFrame ? "-" + YOUTUBE_CHROME_CROP + "px 0" : "0";
     media.style.width = "100%";
-    media.style.height = "100%";
+    media.style.height = cleanYouTubeFrame
+      ? "calc(100% + " + (YOUTUBE_CHROME_CROP * 2) + "px)"
+      : "100%";
     media.style.minWidth = "0";
     media.style.minHeight = "0";
     media.style.maxWidth = "none";
@@ -777,7 +782,15 @@
     if (activeMedia.tagName === "IFRAME") {
       var paused = shouldPause();
       if (activeRecord && activeRecord.type === "youtube") {
-        activeMedia.style.visibility = document.hidden ? "hidden" : "visible";
+        var showPreview = paused || document.hidden;
+        activeMedia.style.visibility = showPreview ? "hidden" : "visible";
+        if (mediaLayer) {
+          mediaLayer.style.backgroundImage = showPreview && activeRecord.preview
+            ? 'url("' + activeRecord.preview + '")'
+            : "";
+          mediaLayer.style.backgroundPosition = "center";
+          mediaLayer.style.backgroundSize = "cover";
+        }
         var volume = Math.max(0, Math.min(100, Number(runtimeSettings.wallpaperVolume || 0)));
         var muted = !audioUnlocked || runtimeSettings.wallpaperMuted !== false;
         postYouTubeCommand(activeMedia, "setVolume", [volume]);
@@ -850,8 +863,8 @@
     var videoId = String(record && record.videoId || "");
     if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return "";
     return "https://www.youtube-nocookie.com/embed/" + videoId
-      + "?autoplay=1&mute=1&controls=0&disablekb=1&enablejsapi=1&fs=0&loop=1&modestbranding=1&playlist="
-      + encodeURIComponent(videoId) + "&playsinline=1&rel=0";
+      + "?autoplay=1&mute=1&controls=0&disablekb=1&enablejsapi=1&fs=0&iv_load_policy=3&loop=1&playlist="
+      + encodeURIComponent(videoId) + "&playsinline=1&rel=0&cc_load_policy=0";
   }
 
   function mountYouTube(record, sequence, layer) {
@@ -865,8 +878,9 @@
     layer.style.backgroundSize = "cover";
     var media = document.createElement("iframe");
     media.title = record.name + " animated YouTube wallpaper";
-    media.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture");
-    media.setAttribute("allowfullscreen", "");
+    media.setAttribute("allow", "autoplay; encrypted-media");
+    media.setAttribute("aria-hidden", "true");
+    media.setAttribute("scrolling", "no");
     media.referrerPolicy = "strict-origin-when-cross-origin";
     media.tabIndex = -1;
     media.className = "wallpaper-media-asset wallpaper-youtube-asset";

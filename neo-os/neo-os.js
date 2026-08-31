@@ -174,20 +174,6 @@
       category: "Games",
       aliases: ["html games", "games", "play", "arcade", "catalog", "zones"]
     },
-    chat: {
-      id: "chat",
-      title: "Messages",
-      subtitle: "Conversations and rooms",
-      icon: "chat",
-      template: "messages-template",
-      width: 1180,
-      height: 760,
-      launcher: true,
-      pinned: true,
-      core: true,
-      category: "Social",
-      aliases: ["messages", "rooms", "dm"]
-    },
     music: {
       id: "music",
       title: "Audio Player",
@@ -5280,7 +5266,6 @@
     bindGlobalEvents();
     window.addEventListener("neo-auth-changed", updateTopbarAccount);
     initCustomWallpaper();
-    initAccountGate();
     performBoot();
     scheduleBrowsePrewarm();
   }

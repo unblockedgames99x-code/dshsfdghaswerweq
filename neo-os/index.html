@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#080a0d" />
     <meta
       name="description"
-      content="NEO OS, a fast personal workspace for media, messages, and creativity."
+      content="NEO OS, a fast personal workspace for media, browsing, and creativity."
     />
     <meta name="color-scheme" content="dark" />
     <script>
@@ -240,25 +240,6 @@
       <p class="boot-copy">Starting your workspace</p>
     </div>
 
-    <section id="neo-login-gate" class="neo-login-gate" aria-labelledby="neo-login-gate-title" hidden>
-      <div class="neo-login-app-rail" aria-hidden="true">
-        <span><svg class="icon"><use href="#i-folder"></use></svg></span>
-        <span><svg class="icon"><use href="#i-chat"></use></svg></span>
-        <span><svg class="icon"><use href="#i-music"></use></svg></span>
-        <span><svg class="icon"><use href="#i-image"></use></svg></span>
-      </div>
-      <header class="neo-login-time" aria-label="Current date and time">
-        <time data-neo-login-clock>12:00:00</time>
-        <span data-neo-login-date>Thursday, August 20</span>
-      </header>
-      <div class="neo-login-panel">
-        <img src="./assets/neo-logo.svg" width="64" height="64" alt="" />
-        <h1 id="neo-login-gate-title">Welcome to NEO OS</h1>
-        <div class="neo-login-auth-host" data-neo-login-auth></div>
-        <button class="neo-login-guest" type="button" data-neo-login-guest>Continue without chat</button>
-      </div>
-    </section>
-
     <main id="neo-desktop" class="desktop" tabindex="-1">
       <div class="wallpaper" aria-hidden="true">
         <div id="wallpaper-media" class="wallpaper-media"></div>
@@ -294,13 +275,6 @@
           <button class="topbar-action" type="button" data-open-launcher aria-label="Search apps" title="Search apps">
             <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
           </button>
-          <button class="topbar-action" type="button" data-app="chat" aria-label="Open Messages" title="Messages">
-            <svg class="icon" aria-hidden="true"><use href="#i-chat"></use></svg>
-          </button>
-          <button class="topbar-action" type="button" data-open-chat-section="servers" aria-label="Open chat rooms" title="Rooms">
-            <svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg>
-          </button>
-          <button class="topbar-account" type="button" data-topbar-account aria-label="Choose a chat name" title="Choose a name"><span data-topbar-account-initial>?</span></button>
           <span class="connection-state" id="connection-state">
             <span class="connection-dot"></span>
             <span class="connection-label sr-only">Online</span>
@@ -433,9 +407,6 @@
             </button>
             <button class="dock-button" type="button" data-app="zones" aria-label="HTML Games" data-tooltip="HTML Games">
               <span class="dock-app-tile dock-app-art app-icon-shape app-icon-html-games"><img class="app-image-icon" src="./assets/html-games.svg?v=20260827-blue-controller-v1" width="32" height="32" alt="" /></span>
-            </button>
-            <button class="dock-button" type="button" data-app="chat" aria-label="Messages" data-tooltip="Messages">
-              <span class="dock-app-tile dock-app-art app-icon-shape app-icon-chat"><img class="app-image-icon" src="./assets/messages.png" width="32" height="32" alt="" /></span>
             </button>
             <button class="dock-button" type="button" data-app="media" aria-label="Media Player" data-tooltip="Media Player">
               <span class="dock-app-tile dock-app-art app-icon-shape app-icon-media-player"><img class="app-image-icon" src="./assets/media-player.svg?v=20260827-high-resolution-v1" width="32" height="32" alt="" /></span>
@@ -608,82 +579,6 @@
           </form>
         </div>
       </section>
-    </template>
-
-    <template id="messages-template">
-      <div class="native-app neo-messages" data-messages-app>
-        <aside class="messages-sidebar" aria-label="Conversations">
-          <header class="messages-sidebar-heading">
-            <h2>Messages</h2>
-            <button class="messages-compose-shortcut" type="button" data-chat-compose aria-label="Find a conversation" title="Find a conversation">
-              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
-            </button>
-          </header>
-          <label class="messages-search">
-            <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
-            <span class="sr-only">Search conversations</span>
-            <input type="search" data-chat-search placeholder="Search" autocomplete="off" />
-          </label>
-          <div class="messages-directory">
-            <section class="messages-pinned-section" data-chat-pinned-section aria-labelledby="messages-pinned-title">
-              <h3 id="messages-pinned-title">Pinned</h3>
-              <nav class="messages-pinned-list" data-chat-pinned-list aria-label="Pinned conversations">
-                <div class="messages-pinned-loading" aria-hidden="true"><span></span></div>
-              </nav>
-            </section>
-            <section class="messages-recent-section" aria-labelledby="messages-recent-title">
-              <h3 id="messages-recent-title">Direct Messages</h3>
-              <nav class="messages-room-list" data-chat-room-list aria-label="Recent conversations">
-                <div class="messages-room-loading" aria-hidden="true"><span></span><span></span><span></span></div>
-              </nav>
-            </section>
-            <section class="messages-server-section" data-chat-server-section aria-labelledby="messages-server-title" hidden>
-              <h3 id="messages-server-title">Servers</h3>
-              <nav class="messages-room-list messages-server-list" data-chat-server-list aria-label="Servers"></nav>
-            </section>
-          </div>
-          <footer class="messages-connection">
-            <span class="messages-connection-dot" data-chat-connection-dot aria-hidden="true"></span>
-            <span class="messages-connection-copy"><span data-chat-connection>Checking name...</span><small data-chat-account>Offline</small></span>
-            <span class="messages-connection-actions">
-              <button class="messages-sign-in" data-chat-sign-in type="button" aria-label="Choose a chat name">Choose name</button>
-            </span>
-          </footer>
-        </aside>
-
-        <section class="messages-conversation" aria-labelledby="messages-conversation-title">
-          <header class="messages-conversation-heading">
-            <button class="messages-back" type="button" data-chat-back aria-label="Back to conversations"><svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg></button>
-            <div class="messages-heading-person">
-              <span class="messages-heading-avatar" data-chat-heading-avatar aria-hidden="true">G</span>
-              <div><h3 id="messages-conversation-title" data-chat-title>Global Chat</h3><p data-chat-subtitle>Connecting...</p></div>
-            </div>
-          </header>
-          <div class="messages-thread" data-chat-thread role="log" aria-live="polite" aria-label="Global Chat messages">
-            <div class="messages-thread-state"><span class="library-spinner" aria-hidden="true"></span><strong>Opening Messages</strong><p>Loading recent conversations.</p></div>
-          </div>
-          <form class="messages-composer" data-chat-form>
-            <div class="messages-composer-shell">
-              <label class="sr-only" for="neo-message-input">iMessage</label>
-              <textarea id="neo-message-input" data-chat-input rows="1" maxlength="1000" placeholder="iMessage" disabled></textarea>
-              <button type="submit" data-chat-send aria-label="Send message" disabled><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
-            </div>
-            <p data-chat-feedback aria-live="polite"></p>
-          </form>
-        </section>
-        <dialog class="messages-profile-sheet" data-chat-profile aria-labelledby="messages-profile-name">
-          <form method="dialog" class="messages-profile-card">
-            <button class="messages-profile-close" type="submit" aria-label="Close profile"><svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg></button>
-            <span class="messages-profile-avatar messages-avatar" data-chat-profile-avatar aria-hidden="true">?</span>
-            <div class="messages-profile-copy">
-              <h3 id="messages-profile-name" data-chat-profile-name>Username</h3>
-              <p data-chat-profile-status>NEO member</p>
-            </div>
-            <button class="messages-profile-dm" type="button" data-chat-profile-dm><svg class="icon" aria-hidden="true"><use href="#i-chat"></use></svg><span>Message</span></button>
-            <p class="messages-profile-feedback" data-chat-profile-feedback role="status" aria-live="polite"></p>
-          </form>
-        </dialog>
-      </div>
     </template>
 
     <template id="wallpaper-template">

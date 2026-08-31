@@ -8,7 +8,7 @@
       subtitle: "Streaming and local MP3 playback",
       icon: "stream",
       template: "browser-template",
-      browserTarget: "./music-v3/?v=20260830-full-tracks-v3",
+      browserTarget: "./music-v3/index.html?v=20260830-full-tracks-v4",
       browserDirect: true,
       browserChrome: false,
       browserTheme: "stream-music",

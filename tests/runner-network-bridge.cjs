@@ -70,7 +70,7 @@ const host = {
       body = "1:Example level";
       headers = { "content-type": "text/plain" };
     } else if (request.url.includes("getGJSongInfo.php")) {
-      body = "2~|~Full Test Song~|~10~|~https%3A%2F%2Fexample.com%2Fsong.mp3";
+      body = "2~|~Full Test Song~|~10~|~http%3A%2F%2Faudio.ngfiles.com%2Fsong.mp3";
       headers = { "content-type": "text/plain" };
     } else if (request.url.includes("/audio-proxy")) {
       const range = String(request.headers.range || "bytes=0-");

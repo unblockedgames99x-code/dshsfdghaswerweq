@@ -88,7 +88,7 @@
     for (var index = 0; index + 1 < parts.length; index += 2) fields[parts[index]] = parts[index + 1];
     var songUrl = String(fields["10"] || "").trim();
     try { songUrl = decodeURIComponent(songUrl); } catch (_error) {}
-    if (!/^https:\/\//i.test(songUrl)) throw new Error("The full Geometry Dash song URL is unavailable.");
+    if (!/^https?:\/\//i.test(songUrl)) throw new Error("The full Geometry Dash song URL is unavailable.");
     var proxyUrl = new URL("https://gd-proxy.gmdc.workers.dev/audio-proxy");
     proxyUrl.searchParams.set("url", songUrl);
     return responseFromAudioBlob(await downloadRelayedMedia(proxyUrl, signal));

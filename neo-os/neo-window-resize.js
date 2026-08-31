@@ -386,6 +386,9 @@
     syncFullscreenButton(win, false);
     document.documentElement.classList.remove("has-tab-fullscreen");
     document.documentElement.removeAttribute("data-tab-fullscreen");
+    window.dispatchEvent(new CustomEvent("neo-tab-fullscreen-change", {
+      detail: { active: false, appId: win.dataset.appId || "" }
+    }));
     if (returnFocus && win.isConnected && !win.classList.contains("is-minimized")) {
       win.focus({ preventScroll: true });
     }
@@ -400,6 +403,9 @@
     syncFullscreenButton(win, true);
     document.documentElement.classList.add("has-tab-fullscreen");
     document.documentElement.dataset.tabFullscreen = win.dataset.appId || "app";
+    window.dispatchEvent(new CustomEvent("neo-tab-fullscreen-change", {
+      detail: { active: true, appId: win.dataset.appId || "" }
+    }));
     win.focus({ preventScroll: true });
     return true;
   }

@@ -36,6 +36,9 @@
   var nowPlayingWidget = document.querySelector("[data-widget='now-playing']");
   var nowPlayingState = null;
   var nowPlayingLevelTimer = 0;
+  var gameNowPlayingOverlay = null;
+  var gameNowPlayingDrag = null;
+  var GAME_NOW_PLAYING_POSITION_KEY = "neo_os_game_now_playing_position_v1";
   var mediaPrioritySources = new Set();
   var connectionState = document.getElementById("connection-state");
   var openWindows = new Map();
@@ -397,6 +400,13 @@
       input.setAttribute("aria-valuetext", percentage + " percent");
     }
     if (output) output.textContent = percentage + "%";
+    var gameInput = gameNowPlayingOverlay && gameNowPlayingOverlay.querySelector("[data-game-now-playing-volume]");
+    var gameOutput = gameNowPlayingOverlay && gameNowPlayingOverlay.querySelector("[data-game-now-playing-volume-output]");
+    if (gameInput) {
+      gameInput.value = String(percentage);
+      gameInput.setAttribute("aria-valuetext", percentage + " percent");
+    }
+    if (gameOutput) gameOutput.textContent = percentage + "%";
     if (nowPlayingState.source === "local-music") {
       loadFeatureRuntime().then(function (runtime) {
         if (runtime && typeof runtime.setVolume === "function") runtime.setVolume(volume);
@@ -438,6 +448,184 @@
     nowPlayingLevelTimer = window.setTimeout(clearNowPlayingLevels, 480);
   }
 
+  function alignGameNowPlayingPopover() {
+    if (!gameNowPlayingOverlay || !gameNowPlayingOverlay.isConnected) return;
+    var rect = gameNowPlayingOverlay.getBoundingClientRect();
+    gameNowPlayingOverlay.classList.toggle("opens-below", rect.top < 150);
+    gameNowPlayingOverlay.classList.toggle("opens-right", rect.left < 260);
+  }
+
+  function saveGameNowPlayingPosition() {
+    if (!gameNowPlayingOverlay || !gameNowPlayingOverlay.isConnected) return;
+    var rect = gameNowPlayingOverlay.getBoundingClientRect();
+    writeJson(GAME_NOW_PLAYING_POSITION_KEY, { x: Math.round(rect.left), y: Math.round(rect.top) });
+  }
+
+  function positionGameNowPlayingOverlay() {
+    if (!gameNowPlayingOverlay || !gameNowPlayingOverlay.isConnected) return;
+    var saved = readJson(GAME_NOW_PLAYING_POSITION_KEY, null);
+    if (saved && Number.isFinite(Number(saved.x)) && Number.isFinite(Number(saved.y))) {
+      var rect = gameNowPlayingOverlay.getBoundingClientRect();
+      gameNowPlayingOverlay.style.left = Math.round(clamp(Number(saved.x), 12, Math.max(12, window.innerWidth - rect.width - 12))) + "px";
+      gameNowPlayingOverlay.style.top = Math.round(clamp(Number(saved.y), 12, Math.max(12, window.innerHeight - rect.height - 12))) + "px";
+      gameNowPlayingOverlay.style.right = "auto";
+      gameNowPlayingOverlay.style.bottom = "auto";
+    } else {
+      gameNowPlayingOverlay.style.removeProperty("left");
+      gameNowPlayingOverlay.style.removeProperty("top");
+      gameNowPlayingOverlay.style.right = "20px";
+      gameNowPlayingOverlay.style.bottom = "20px";
+    }
+    alignGameNowPlayingPopover();
+  }
+
+  function ensureGameNowPlayingOverlay() {
+    if (gameNowPlayingOverlay) return gameNowPlayingOverlay;
+    var overlay = document.createElement("aside");
+    overlay.className = "game-now-playing";
+    overlay.hidden = true;
+    overlay.setAttribute("data-game-now-playing", "");
+    overlay.setAttribute("aria-label", "Now playing while gaming");
+    overlay.innerHTML =
+      '<div class="game-now-playing-popover">' +
+        '<span class="game-now-playing-kicker">NOW PLAYING</span>' +
+        '<strong data-game-now-playing-title>Music</strong>' +
+        '<small data-game-now-playing-copy></small>' +
+        '<div class="game-now-playing-volume-row">' +
+          '<svg class="icon" aria-hidden="true"><use href="#i-volume"></use></svg>' +
+          '<label><span class="sr-only">Music volume</span><input type="range" min="0" max="100" value="100" step="1" data-game-now-playing-volume aria-label="Music volume"></label>' +
+          '<output data-game-now-playing-volume-output>100%</output>' +
+        '</div>' +
+      '</div>' +
+      '<div class="game-now-playing-drag" data-game-now-playing-drag role="button" tabindex="0" aria-label="Drag now playing control">' +
+        '<img class="game-now-playing-cover" data-game-now-playing-cover width="48" height="48" alt="" referrerpolicy="no-referrer" hidden>' +
+        '<span class="game-now-playing-fallback app-icon-stream" data-game-now-playing-fallback></span>' +
+        '<span class="game-now-playing-pulse" aria-hidden="true"><i></i><i></i><i></i></span>' +
+      '</div>';
+
+    var handle = overlay.querySelector("[data-game-now-playing-drag]");
+    var volume = overlay.querySelector("[data-game-now-playing-volume]");
+
+    handle.addEventListener("pointerdown", function (event) {
+      if (event.button !== 0) return;
+      var rect = overlay.getBoundingClientRect();
+      gameNowPlayingDrag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        left: rect.left,
+        top: rect.top
+      };
+      overlay.style.left = Math.round(rect.left) + "px";
+      overlay.style.top = Math.round(rect.top) + "px";
+      overlay.style.right = "auto";
+      overlay.style.bottom = "auto";
+      overlay.classList.add("is-dragging");
+      handle.setAttribute("aria-grabbed", "true");
+      handle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    handle.addEventListener("pointermove", function (event) {
+      if (!gameNowPlayingDrag || gameNowPlayingDrag.pointerId !== event.pointerId) return;
+      var rect = overlay.getBoundingClientRect();
+      var left = clamp(gameNowPlayingDrag.left + event.clientX - gameNowPlayingDrag.startX, 12, Math.max(12, window.innerWidth - rect.width - 12));
+      var top = clamp(gameNowPlayingDrag.top + event.clientY - gameNowPlayingDrag.startY, 12, Math.max(12, window.innerHeight - rect.height - 12));
+      overlay.style.left = Math.round(left) + "px";
+      overlay.style.top = Math.round(top) + "px";
+      alignGameNowPlayingPopover();
+    });
+    function finishGameNowPlayingDrag(event) {
+      if (!gameNowPlayingDrag || gameNowPlayingDrag.pointerId !== event.pointerId) return;
+      if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+      gameNowPlayingDrag = null;
+      overlay.classList.remove("is-dragging");
+      handle.setAttribute("aria-grabbed", "false");
+      saveGameNowPlayingPosition();
+    }
+    handle.addEventListener("pointerup", finishGameNowPlayingDrag);
+    handle.addEventListener("pointercancel", finishGameNowPlayingDrag);
+    handle.addEventListener("keydown", function (event) {
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+      var rect = overlay.getBoundingClientRect();
+      var step = event.shiftKey ? 24 : 8;
+      var left = rect.left + (event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0);
+      var top = rect.top + (event.key === "ArrowDown" ? step : event.key === "ArrowUp" ? -step : 0);
+      overlay.style.left = Math.round(clamp(left, 12, Math.max(12, window.innerWidth - rect.width - 12))) + "px";
+      overlay.style.top = Math.round(clamp(top, 12, Math.max(12, window.innerHeight - rect.height - 12))) + "px";
+      overlay.style.right = "auto";
+      overlay.style.bottom = "auto";
+      alignGameNowPlayingPopover();
+      saveGameNowPlayingPosition();
+      event.preventDefault();
+    });
+    volume.addEventListener("input", function () {
+      setNowPlayingVolume(Number(volume.value) / 100);
+    });
+    gameNowPlayingOverlay = overlay;
+    return overlay;
+  }
+
+  function syncGameNowPlayingOverlay() {
+    var fullscreenWindow = windowLayer && windowLayer.querySelector(".neo-window.is-tab-fullscreen");
+    var fullscreenApp = fullscreenWindow && apps[fullscreenWindow.dataset.appId];
+    var show = Boolean(
+      fullscreenWindow &&
+      fullscreenApp &&
+      fullscreenApp.category === "Games" &&
+      nowPlayingState &&
+      nowPlayingState.playing === true &&
+      nowPlayingState.kind === "audio"
+    );
+    if (!show) {
+      if (gameNowPlayingOverlay) {
+        gameNowPlayingOverlay.hidden = true;
+        gameNowPlayingOverlay.remove();
+      }
+      gameNowPlayingDrag = null;
+      return;
+    }
+
+    var overlay = ensureGameNowPlayingOverlay();
+    var parentChanged = overlay.parentNode !== fullscreenWindow;
+    var title = overlay.querySelector("[data-game-now-playing-title]");
+    var copy = overlay.querySelector("[data-game-now-playing-copy]");
+    var cover = overlay.querySelector("[data-game-now-playing-cover]");
+    var fallback = overlay.querySelector("[data-game-now-playing-fallback]");
+    var input = overlay.querySelector("[data-game-now-playing-volume]");
+    var output = overlay.querySelector("[data-game-now-playing-volume-output]");
+    var percentage = Math.round(clamp(nowPlayingState.volume, 0, 1) * 100);
+    title.textContent = nowPlayingState.title || "Music";
+    copy.textContent = nowPlayingState.subtitle || "NEO Music";
+    input.value = String(percentage);
+    input.setAttribute("aria-valuetext", percentage + " percent");
+    output.textContent = percentage + "%";
+    fallback.className = "game-now-playing-fallback " + appIconClass(nowPlayingState.icon || "stream");
+    fallback.innerHTML = iconMarkup(nowPlayingState.icon || "stream");
+    cover.onerror = function () {
+      cover.hidden = true;
+      fallback.hidden = false;
+      overlay.classList.remove("has-cover");
+    };
+    if (nowPlayingState.cover) {
+      cover.src = nowPlayingState.cover;
+      cover.hidden = false;
+      fallback.hidden = true;
+      overlay.classList.add("has-cover");
+    } else {
+      cover.removeAttribute("src");
+      cover.hidden = true;
+      fallback.hidden = false;
+      overlay.classList.remove("has-cover");
+    }
+    overlay.hidden = false;
+    if (parentChanged) {
+      fullscreenWindow.appendChild(overlay);
+      requestAnimationFrame(positionGameNowPlayingOverlay);
+    } else {
+      alignGameNowPlayingPopover();
+    }
+  }
+
   function renderNowPlaying(detail) {
     if (!nowPlayingWidget || !detail) return;
     var source = String(detail.source || "media");
@@ -449,6 +637,7 @@
         closeNowPlayingVolume();
         nowPlayingWidget.hidden = true;
         if (topbarMedia) topbarMedia.hidden = true;
+        syncGameNowPlayingOverlay();
       }
       return;
     }
@@ -471,9 +660,15 @@
     nowPlayingState = {
       source: source,
       appId: appId,
+      kind: detail.kind === "audio" ? "audio" : "media",
+      title: title,
+      subtitle: String(detail.copy || detail.subtitle || app.subtitle || "Now playing").trim().slice(0, 180),
+      cover: cover,
+      icon: detail.icon || app.icon || "stream",
       playing: playing,
       paused: paused,
-      volume: volume
+      volume: hasVolume ? volume : (nowPlayingState && nowPlayingState.source === source ? nowPlayingState.volume : 1),
+      volumeControl: hasVolume
     };
 
     nowPlayingWidget.hidden = false;
@@ -582,6 +777,7 @@
       toggle.innerHTML = iconMarkup(playing ? "pause" : "play");
       toggle.setAttribute("aria-label", playing ? "Pause" : "Play");
     }
+    syncGameNowPlayingOverlay();
   }
 
   function showStreamNowPlaying() {
@@ -4736,6 +4932,7 @@
     window.addEventListener("neo-media-levels", function (event) {
       renderNowPlayingLevels(event.detail || {});
     });
+    window.addEventListener("neo-tab-fullscreen-change", syncGameNowPlayingOverlay);
 
     if (launcherDismissLayer) launcherDismissLayer.addEventListener("click", function (event) {
       event.preventDefault();
@@ -4987,6 +5184,7 @@
     window.addEventListener("offline", updateConnection);
     window.addEventListener("resize", function () {
       fitDockToViewport(document.getElementById("neo-dock"));
+      if (gameNowPlayingOverlay && gameNowPlayingOverlay.isConnected) positionGameNowPlayingOverlay();
       if (isSmallScreen()) {
         openWindows.forEach(function (win) { win.classList.remove("is-maximized"); });
       }

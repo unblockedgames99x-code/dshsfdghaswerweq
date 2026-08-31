@@ -88,8 +88,31 @@
   }
 
   function syncSnapTaskbar() {
-    var snapped = layer.querySelector(".neo-window.is-snapped.is-open:not(.is-minimized)");
-    document.documentElement.classList.toggle("has-window-snap-mode", Boolean(snapped));
+    var root = document.documentElement;
+    var taskbar = document.querySelector(".taskbar");
+    var snapped = Array.prototype.slice.call(
+      layer.querySelectorAll(".neo-window.is-snapped.is-open:not(.is-minimized)")
+    );
+
+    if (!taskbar || !snapped.length) {
+      root.classList.remove("has-window-snap-mode");
+      return;
+    }
+
+    // Measure the dock in its visible position. The hiding class moves it off
+    // screen, so keeping that class during measurement would make every later
+    // overlap check incorrect.
+    root.classList.remove("has-window-snap-mode");
+    var taskbarRect = taskbar.getBoundingClientRect();
+    var covered = snapped.some(function (win) {
+      var winRect = win.getBoundingClientRect();
+      return winRect.left < taskbarRect.right
+        && winRect.right > taskbarRect.left
+        && winRect.top < taskbarRect.bottom
+        && winRect.bottom > taskbarRect.top;
+    });
+
+    root.classList.toggle("has-window-snap-mode", covered);
   }
 
   function hideSnapLayouts() {
@@ -178,7 +201,7 @@
     win.style.height = Math.round(usableHeight * height - topInset - bottomInset) + "px";
     win.classList.add("is-snapped");
     win.dataset.snapPlacement = placementName;
-    document.documentElement.classList.add("has-window-snap-mode");
+    syncSnapTaskbar();
     hideSnapLayouts();
     win.focus({ preventScroll: true });
     win.dispatchEvent(new CustomEvent("neo-window-snapped", { detail: { placement: placementName } }));
@@ -471,6 +494,7 @@
   document.addEventListener("keydown", handleTabFullscreenShortcut, true);
   document.addEventListener("click", leaveSnapForWindowAction, true);
   document.addEventListener("click", handleFullscreenButton);
+  window.addEventListener("resize", syncSnapTaskbar);
   document.addEventListener("pointerdown", function (event) {
     if (openSnapPanel && !event.target.closest(".neo-snap-layouts, [data-window-action='fullscreen']")) hideSnapLayouts();
   }, true);

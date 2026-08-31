@@ -365,7 +365,20 @@
       retry.hidden = true;
       var destination = new URL(target.href);
       if (isRetry) destination.searchParams.set("neo_retry", String(Date.now()));
-      frame.src = destination.href;
+      if (window.NEOFrameLoader) {
+        window.NEOFrameLoader.load(frame, destination.href, {
+          forceFetch: true,
+          cache: isRetry ? "no-store" : "force-cache"
+        }).catch(function () {
+          window.clearTimeout(slowTimer);
+          session.classList.add("is-slow");
+          loader.querySelector("strong").textContent = "Music could not connect";
+          loader.querySelector("p").textContent = "Retry the music session.";
+          retry.hidden = false;
+        });
+      } else {
+        frame.src = destination.href;
+      }
       slowTimer = window.setTimeout(function () {
         if (session.classList.contains("is-ready")) return;
         session.classList.add("is-slow");

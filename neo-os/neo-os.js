@@ -4468,7 +4468,12 @@
         applySettings();
         return Promise.all(wallpaperStudios().map(function (studio) {
           studio.dataset.selectedWallpaper = selected.id;
+          studio.dataset.wallpaperSource = "installed";
           studio.dataset.wallpaperView = "installed";
+          var search = studio.querySelector("[data-wallpaper-search]");
+          var typeFilter = studio.querySelector("[data-wallpaper-type-filter]");
+          if (search) search.value = "";
+          if (typeFilter) typeFilter.value = "";
           return wallpaperEngine.hydrateStudio(studio);
         })).then(function () {
           wallpaperStudios().forEach(function (studio) { wireWallpaperStudioCards(studio); refreshWallpaperStudio(studio); });

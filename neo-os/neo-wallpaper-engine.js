@@ -278,6 +278,72 @@
     });
   }
 
+  function encodeImportedImage(source, sourceWidth, sourceHeight) {
+    var maxDimension = 8192;
+    var maxPixels = 33177600;
+    var scale = Math.min(
+      1,
+      maxDimension / Math.max(sourceWidth, sourceHeight),
+      Math.sqrt(maxPixels / Math.max(1, sourceWidth * sourceHeight))
+    );
+    var width = Math.max(1, Math.round(sourceWidth * scale));
+    var height = Math.max(1, Math.round(sourceHeight * scale));
+    var canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    var context = canvas.getContext("2d", { alpha: true });
+    if (!context) return Promise.reject(new Error("Chrome could not prepare this picture."));
+    context.drawImage(source, 0, 0, width, height);
+    return Promise.all([
+      new Promise(function (resolve) {
+        canvas.toBlob(function (blob) { resolve(blob || null); }, "image/webp", 0.95);
+      }),
+      drawThumbnail(source, sourceWidth, sourceHeight)
+    ]).then(function (results) {
+      if (!results[0]) throw new Error("Chrome could not convert this picture into a wallpaper.");
+      return { blob: results[0], thumbnail: results[1], width: width, height: height };
+    });
+  }
+
+  function prepareImportedImage(file) {
+    if (window.createImageBitmap) {
+      return createImageBitmap(file, { imageOrientation: "from-image" }).then(function (bitmap) {
+        return encodeImportedImage(bitmap, bitmap.width, bitmap.height).then(function (prepared) {
+          if (typeof bitmap.close === "function") bitmap.close();
+          return prepared;
+        }, function (error) {
+          if (typeof bitmap.close === "function") bitmap.close();
+          throw error;
+        });
+      }).catch(function () {
+        throw new Error("Chrome could not decode this picture. Try exporting it as PNG, JPG, or WebP.");
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      var image = new Image();
+      var url = URL.createObjectURL(file);
+      image.onload = function () {
+        encodeImportedImage(image, image.naturalWidth, image.naturalHeight).then(resolve, reject).then(function () {
+          URL.revokeObjectURL(url);
+        });
+      };
+      image.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error("Chrome could not decode this picture. Try exporting it as PNG, JPG, or WebP."));
+      };
+      image.src = url;
+    });
+  }
+
+  function readBlobAsDataUrl(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(typeof reader.result === "string" ? reader.result : ""); };
+      reader.onerror = function () { reject(reader.error || new Error("Could not read the wallpaper file.")); };
+      reader.readAsDataURL(blob);
+    });
+  }
+
   function storeRecord(record) {
     return runTransaction("readwrite", function (store) { store.put(record); }).then(function () {
       return acceptStoredRecord(record);
@@ -302,17 +368,27 @@
     }
     if (file.size > MAX_FILE_SIZE) return Promise.reject(new Error("Wallpaper files must be under 160 MB."));
     var type = file.type.indexOf("video/") === 0 ? "video" : (file.type === "image/gif" ? "animated-image" : "image");
-    var thumbnailPromise = type === "video" ? videoThumbnail(file) : imageThumbnail(file);
-    return thumbnailPromise.then(function (thumbnail) {
+    var mediaPromise = type === "image"
+      ? prepareImportedImage(file)
+      : (type === "video" ? videoThumbnail(file) : imageThumbnail(file)).then(function (thumbnail) {
+        return { blob: file, thumbnail: thumbnail, width: 0, height: 0 };
+      });
+    return mediaPromise.then(function (prepared) {
       var record = {
         id: uniqueId(),
         name: cleanName(file.name),
         type: type,
-        mime: file.type,
-        size: file.size,
+        mime: prepared.blob.type || file.type,
+        size: prepared.blob.size,
+        sourceSize: file.size,
+        width: prepared.width || 0,
+        height: prepared.height || 0,
         createdAt: Date.now(),
-        blob: file,
-        thumbnail: thumbnail
+        blob: prepared.blob,
+        thumbnail: prepared.thumbnail,
+        fullMedia: true,
+        previewFallback: false,
+        sourceType: type
       };
       return storeRecord(record);
     });
@@ -358,8 +434,16 @@
   function recordFor(id) {
     var value = String(id || "");
     var local = library.find(function (item) { return item.id === value; });
-    if (local && local.fullMedia === true && local.previewFallback !== true) return local;
+    if (hasUsableFullMedia(local)) return local;
     return bundledFor(value) || null;
+  }
+
+  function hasUsableFullMedia(record) {
+    if (!record || record.previewFallback === true) return false;
+    if (record.fullMedia === true) return true;
+    // Imports created before fullMedia was recorded are still valid. Keep them
+    // visible and usable instead of making the user's saved wallpaper vanish.
+    return !record.online && isLocal(record.id) && record.blob instanceof Blob;
   }
 
   function visibleLibrary() {
@@ -367,10 +451,10 @@
     library.forEach(function (item) {
       var bundled = bundledFor(item);
       if (bundled) {
-        if (item.fullMedia === true && item.previewFallback !== true) records[records.indexOf(bundled)] = item;
+        if (hasUsableFullMedia(item)) records[records.indexOf(bundled)] = item;
         return;
       }
-      if (item.fullMedia === true && item.previewFallback !== true && !records.some(function (record) { return record.id === item.id; })) records.push(item);
+      if (hasUsableFullMedia(item) && !records.some(function (record) { return record.id === item.id; })) records.push(item);
     });
     return records;
   }
@@ -842,6 +926,7 @@
     pendingMedia = media;
     return new Promise(function (resolve, reject) {
       var settled = false;
+      var dataUrlRetry = false;
       var frameRequest = 0;
       var frameFallback = 0;
       var timeout = window.setTimeout(function () {
@@ -871,6 +956,18 @@
         } else resolve({ media: media, previewUrl: previewUrl, animatedImage: animatedImage });
       }
       function failed() {
+        if (media.tagName === "IMG" && !dataUrlRetry && record.blob instanceof Blob) {
+          dataUrlRetry = true;
+          readBlobAsDataUrl(record.blob).then(function (dataUrl) {
+            if (settled || sequence !== applySequence) return;
+            if (!dataUrl) return finish(new Error("Chrome could not read this wallpaper file."));
+            media.src = dataUrl;
+            if (media.complete) ready();
+          }).catch(function () {
+            finish(new Error("Chrome could not decode this wallpaper file."));
+          });
+          return;
+        }
         finish(new Error("Chrome could not decode this wallpaper file."));
       }
       function ready() {

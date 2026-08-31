@@ -1363,7 +1363,7 @@
       if (!document.querySelector('link[data-neo-files]')) {
         var style = document.createElement("link");
         style.rel = "stylesheet";
-        style.href = "./neo-files.css?v=20260827-file-explorer-ui-v1";
+        style.href = "./neo-files.css?v=20260830-file-toolbar-v2";
         style.dataset.neoFiles = "";
         document.head.appendChild(style);
       }

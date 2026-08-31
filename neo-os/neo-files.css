@@ -1264,7 +1264,7 @@
 }
 
 .files-commandbar {
-  grid-template-columns: 214px minmax(260px, 720px) minmax(110px, 1fr);
+  grid-template-columns: 214px minmax(260px, 680px) minmax(190px, 1fr);
   gap: 16px;
   padding: 8px 18px 8px 16px;
   background: var(--drive-bg);
@@ -1301,14 +1301,63 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 6px;
 }
 
-.files-header-actions span {
+.files-header-actions > span {
+  flex: 0 0 auto;
+  max-width: 92px;
   overflow: hidden;
+  margin-right: 2px;
   color: var(--drive-faint);
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.files-header-actions button {
+  min-width: 0;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: var(--drive-muted);
+  background: var(--drive-control);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.files-header-actions button .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.files-header-actions button span {
+  color: inherit;
+  font-size: inherit;
+  overflow: visible;
+}
+
+.files-header-actions button:hover:not(:disabled),
+.files-header-actions button:focus-visible {
+  color: #000;
+  background: #fff;
+  border-color: #fff;
+}
+
+.files-header-actions button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.files-header-actions button:disabled {
+  opacity: 0.42;
+  cursor: default;
 }
 
 .files-search {

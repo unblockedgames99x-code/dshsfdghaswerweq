@@ -32,8 +32,12 @@
       );
     }
     var hasAssetBase = /<base\b[^>]*\bhref\s*=/i.test(html);
+    var networkRuntime = "";
+    if (isRunner() && !/\/NEO-BROWSER\//i.test(sourceUrl)) {
+      networkRuntime = '<script src="' + escapeAttribute(resolveUrl("./neo-runner-network.js?v=20260831-chromebook-network-v1")) + '"><\/script>';
+    }
     var injection = (hasAssetBase ? "" : '<base href="' + escapeAttribute(baseUrl) + '" target="_self">') +
-      '<meta name="neo-runner" content="nested">';
+      '<meta name="neo-runner" content="nested">' + networkRuntime;
     if (/<head(?:\s[^>]*)?>/i.test(html)) {
       return html.replace(/<head(?:\s[^>]*)?>/i, function (head) {
         return head + injection;

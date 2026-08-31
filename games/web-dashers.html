@@ -42,6 +42,9 @@
         ];
         var status = document.getElementById("status");
         var retry = document.getElementById("retry");
+        var runnerNetworkUrl = document.querySelector('meta[name="neo-runner"]')
+          ? new URL("../neo-os/neo-runner-network.js?v=20260831-chromebook-network-v1", document.baseURI).href
+          : "";
 
         function fetchEntry(root) {
           var controller = new AbortController();
@@ -65,9 +68,12 @@
 
         function install(result) {
           var base = '<base href="' + result.root.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '">';
+          var network = runnerNetworkUrl
+            ? '<script src="' + runnerNetworkUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '"><\/script>'
+            : "";
           var html = /<head\b[^>]*>/i.test(result.html)
-            ? result.html.replace(/<head\b[^>]*>/i, function (head) { return head + base; })
-            : base + result.html;
+            ? result.html.replace(/<head\b[^>]*>/i, function (head) { return head + base + network; })
+            : base + network + result.html;
           document.open();
           document.write(html);
           document.close();

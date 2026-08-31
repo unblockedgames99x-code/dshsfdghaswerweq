@@ -59,6 +59,19 @@
         }).catch(function () {});
       })();
     </script>
+    <script>
+      (function () {
+        function removeLegacyMessagesUi() {
+          var gate = document.getElementById("neo-login-gate");
+          if (gate) gate.remove();
+          document.querySelectorAll('[data-app="chat"], [data-open-chat-section], [data-topbar-account]').forEach(function (element) {
+            element.remove();
+          });
+        }
+        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", removeLegacyMessagesUi, { once: true });
+        else removeLegacyMessagesUi();
+      })();
+    </script>
     <link rel="icon" href="./assets/neo-logo.svg" type="image/svg+xml" />
     <link
       rel="preload"

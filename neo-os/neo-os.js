@@ -66,6 +66,14 @@
   var onlineWallpaperRequestSerial = 0;
   var shellApi = null;
 
+  function removeLegacyMessagesUi() {
+    var gate = document.getElementById("neo-login-gate");
+    if (gate) gate.remove();
+    document.querySelectorAll('[data-app="chat"], [data-open-chat-section], [data-topbar-account]').forEach(function (element) {
+      element.remove();
+    });
+  }
+
   var defaultSettings = {
     designVersion: 13,
     wallpaper: "we-steam-1403160205",
@@ -5209,6 +5217,7 @@
   }
 
   function init() {
+    removeLegacyMessagesUi();
     shellApi = {
       openApp: openApp,
       openWallpaperSource: openWallpaperSource,

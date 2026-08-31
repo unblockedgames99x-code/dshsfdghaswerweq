@@ -22,13 +22,15 @@
     return copy.replace(/<body([^>]*)>/i, '<body$1 data-neo-autostart="1">');
   }
 
-  function openInBlank() {
+  function openInBlank(event) {
     setStatus("Opening NEO OS...");
     var popup = window.open("about:blank", "_blank");
     if (!popup) {
       setStatus("Pop-ups are blocked. Allow pop-ups, then try again.");
       return;
     }
+
+    if (event) event.preventDefault();
 
     try {
       popup.document.open();
@@ -41,7 +43,8 @@
     }
   }
 
-  function enterFullscreen() {
+  function enterFullscreen(event) {
+    if (event) event.preventDefault();
     var request = root.requestFullscreen || root.webkitRequestFullscreen || root.msRequestFullscreen;
     start();
     if (!request) return;
@@ -61,7 +64,7 @@
       document.querySelector('[role="dialog"][aria-label="Launch NEO OS"]');
     if (!boot) return false;
 
-    var buttons = boot.querySelectorAll("button");
+    var buttons = boot.querySelectorAll("button, a");
     openBlankButton = document.getElementById("neo-open-blank") || buttons[0];
     fullscreenButton = document.getElementById("neo-fullscreen") || buttons[1];
     status = document.getElementById("neo-direct-status") || boot.querySelector("p");

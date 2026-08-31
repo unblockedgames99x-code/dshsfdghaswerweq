@@ -35,8 +35,8 @@ const bootBody = String.raw`
 <div id="neo-direct-boot" role="dialog" aria-label="Launch NEO OS">
   <div class="neo-direct-card">
     <div class="neo-direct-actions">
-      <a class="neo-direct-action" id="neo-open-blank" href="${publicWebApp}?launch=1" target="_blank" rel="noopener">Open in about:blank</a>
-      <a class="neo-direct-action" id="neo-fullscreen" href="${publicWebApp}?launch=1" target="_top">Full screen</a>
+      <a class="neo-direct-action" id="neo-open-blank" href="${publicWebApp}?startNeo=1" target="_blank" rel="noopener">Open in about:blank</a>
+      <a class="neo-direct-action" id="neo-fullscreen" href="${publicWebApp}?startNeo=1" target="_top">Full screen</a>
     </div>
     <p id="neo-direct-status" aria-live="polite">Choose how to launch NEO OS</p>
   </div>

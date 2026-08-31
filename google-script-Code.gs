@@ -1,6 +1,8 @@
 function doGet(event) {
   var template = HtmlService.createTemplateFromFile('Index');
-  template.launchMode = Boolean(event && event.parameter && event.parameter.launch === '1');
+  var query = event && event.queryString ? String(event.queryString) : '';
+  var startValue = event && event.parameter ? String(event.parameter.startNeo || '') : '';
+  template.launchMode = startValue === '1' || /(?:^|&)startNeo=1(?:&|$)/.test(query);
 
   return template.evaluate()
     .setTitle('NEO OS')

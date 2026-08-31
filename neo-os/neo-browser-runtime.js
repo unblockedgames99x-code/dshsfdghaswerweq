@@ -1461,7 +1461,13 @@
       if (directOrigin) {
         tab.awaitingTransport = false;
         tab.frame.dataset.navigationId = String(navigationId);
-        tab.frame.src = tab.destination;
+        if (window.NEOFrameLoader) {
+          window.NEOFrameLoader.load(tab.frame, tab.destination, { forceFetch: true }).catch((error) => {
+            if (tab.navigationId === navigationId) showTransportFailure(tab, error);
+          });
+        } else {
+          tab.frame.src = tab.destination;
+        }
         return;
       }
       tab.awaitingTransport = true;

@@ -4,10 +4,13 @@ const sourcePath = new URL("./neo-os/index.html", import.meta.url);
 const outputPath = new URL("./google-script-direct.html", import.meta.url);
 const revision = "aa19be7";
 const cdnRoot = `https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@${revision}/neo-os/`;
-const pageRoot = "https://unblockedgames99x-code.github.io/dshsfdghaswerweq/neo-os/";
+const pageRoot = cdnRoot;
 
 let html = await readFile(sourcePath, "utf8");
-html = html.replace(/<head([^>]*)>/i, `<head$1>\n  <base href="${pageRoot}">`);
+html = html.replace(
+  /<head([^>]*)>/i,
+  `<head$1>\n  <base href="${pageRoot}">\n  <meta name="neo-runner" content="google-apps-script">`
+);
 html = html.replace(/(<script\b[^>]*\bsrc=["'])\.\/([^"']+)(["'])/gi, `$1${cdnRoot}$2$3`);
 html = html.replace(/(<link\b[^>]*\bhref=["'])\.\/([^"']+)(["'])/gi, `$1${cdnRoot}$2$3`);
 

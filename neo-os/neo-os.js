@@ -1390,7 +1390,7 @@
       var existing = document.getElementById("neo-browse-runtime-script");
       var script = existing || document.createElement("script");
       script.id = "neo-browse-runtime-script";
-      script.src = "./neo-browser-runtime.js?v=20260827-transport-recovery-v67";
+      script.src = "./neo-browser-runtime.js?v=20260830-jsdelivr-html-v68";
       script.async = true;
       script.onload = function () {
         if (!window.NEO_BROWSER_ENGINE) {

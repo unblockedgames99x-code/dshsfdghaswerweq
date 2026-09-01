@@ -64,16 +64,34 @@
 
   function placeMenu(button, clientX, clientY) {
     var rect = button.getBoundingClientRect();
+    var taskbar = button.closest(".taskbar");
+    var taskbarRect = taskbar ? taskbar.getBoundingClientRect() : rect;
+    var position = document.documentElement.dataset.taskbarPosition || "left";
     var margin = 8;
+    var gap = 10;
     var width = menu.offsetWidth;
     var height = menu.offsetHeight;
     var anchorX = clientX > 0 ? clientX : rect.left + rect.width / 2;
-    var anchorY = clientY > 0 ? clientY : rect.top;
-    var left = Math.min(Math.max(margin, anchorX - 20), window.innerWidth - width - margin);
-    var top = anchorY - height - 10;
-    if (top < margin) top = Math.min(window.innerHeight - height - margin, rect.bottom + 8);
+    var anchorY = clientY > 0 ? clientY : rect.top + rect.height / 2;
+    var left = anchorX - 20;
+    var top = anchorY - height / 2;
+
+    if (position === "left") {
+      left = taskbarRect.right + gap;
+    } else if (position === "right") {
+      left = taskbarRect.left - width - gap;
+    } else if (position === "top") {
+      left = anchorX - width / 2;
+      top = taskbarRect.bottom + gap;
+    } else {
+      left = anchorX - width / 2;
+      top = taskbarRect.top - height - gap;
+    }
+
+    left = Math.min(Math.max(margin, left), window.innerWidth - width - margin);
+    top = Math.min(Math.max(margin, top), window.innerHeight - height - margin);
     menu.style.left = Math.round(left) + "px";
-    menu.style.top = Math.round(Math.max(margin, top)) + "px";
+    menu.style.top = Math.round(top) + "px";
   }
 
   function openMenu(button, clientX, clientY, focusMenu) {
@@ -174,6 +192,7 @@
     if (!menu.hidden && !menu.contains(event.target)) closeMenu(false);
   }, true);
   window.addEventListener("resize", function () { closeMenu(false); }, { passive: true });
+  window.addEventListener("neo-taskbar-layout-change", function () { closeMenu(false); });
   window.addEventListener("blur", function () { closeMenu(false); });
   document.addEventListener("scroll", function () { closeMenu(false); }, true);
 })();

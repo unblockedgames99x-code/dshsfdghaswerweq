@@ -369,7 +369,7 @@
 
   function closeDesktopSubmenus(menu, except) {
     if (!menu) return;
-    var mobileDrillIn = Boolean(except && window.innerWidth < 520);
+    var mobileDrillIn = Boolean(except && window.matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1366px), (max-height: 500px) and (max-width: 960px)").matches);
     menu.classList.toggle("has-mobile-submenu", mobileDrillIn);
     menu.querySelectorAll(".context-menu-branch").forEach(function (branch) {
       var trigger = branch.querySelector("[data-context-submenu]");
@@ -433,7 +433,7 @@
     panel.style.top = "-6px";
     var triggerRect = trigger.getBoundingClientRect();
     var panelRect = panel.getBoundingClientRect();
-    if (window.innerWidth < 520) {
+    if (window.matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1366px), (max-height: 500px) and (max-width: 960px)").matches) {
       panel.classList.add("is-mobile");
       panel.style.left = "";
       panel.style.top = "";

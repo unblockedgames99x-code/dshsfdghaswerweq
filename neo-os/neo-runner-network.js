@@ -7,7 +7,10 @@
   var pending = new Map();
   var nextRequestId = 0;
   var MEDIA_CHUNK_BYTES = 4 * 1024 * 1024;
+  var MEDIA_PARALLEL_RANGES = 3;
   var MAX_MEDIA_BYTES = 48 * 1024 * 1024;
+  var MUSIC_SEARCH_TIMEOUT_MS = 8000;
+  var MUSIC_STARTUP_TIMEOUT_MS = 8000;
 
   function parseUrl(value) {
     try { return new URL(String(value || ""), document.baseURI); } catch (_error) { return null; }
@@ -41,6 +44,15 @@
         "/downloadGJLevel22.php",
         "/getGJSongInfo.php",
         "/audio-proxy"
+      ].indexOf(path) !== -1;
+    }
+    if (url.hostname === "api.stratus.lol") {
+      return [
+        "/cloud/v1/createSession",
+        "/cloud/v1/getQueue",
+        "/cloud/v1/startGame",
+        "/cloud/v1/pingSession",
+        "/cloud/v1/quitSession"
       ].indexOf(path) !== -1;
     }
     return url.hostname === "fetchsongid.lasokar.workers.dev" && path === "/";
@@ -130,10 +142,16 @@
       }
 
       var id = "neo-network-" + Date.now().toString(36) + "-" + (++nextRequestId).toString(36);
+      var requestUrl = String(request && request.url || "");
+      var timeoutMs = /\/api\/music\/search(?:\?|$)/i.test(requestUrl)
+        ? MUSIC_SEARCH_TIMEOUT_MS
+        : /\/cloud\/v1\/createSession(?:\?|$)/i.test(requestUrl)
+          ? 240000
+          : 45000;
       var timer = window.setTimeout(function () {
         pending.delete(id);
         reject(new Error("The Google network bridge timed out."));
-      }, 45000);
+      }, timeoutMs);
       var abort = function () {
         window.clearTimeout(timer);
         pending.delete(id);
@@ -228,14 +246,7 @@
     });
   };
 
-  async function downloadRelayedMedia(url, signal) {
-    var chunks = [];
-    var total = null;
-    var start = 0;
-    var contentType = "audio/mp4";
-
-    while (start < MAX_MEDIA_BYTES && (total === null || start < total)) {
-      var end = start + MEDIA_CHUNK_BYTES - 1;
+  async function fetchRelayedMediaRange(url, start, end, expectedTotal, signal) {
       var response = await relayFetch(url.href, {
         cache: "no-store",
         headers: { Range: "bytes=" + start + "-" + end },
@@ -243,7 +254,6 @@
       });
       if (!response.ok) throw new Error("Music relay returned HTTP " + response.status + ".");
       if (response.status !== 206) throw new Error("Music relay did not return a verified byte range.");
-      contentType = response.headers.get("content-type") || contentType;
       var bytes = new Uint8Array(await response.arrayBuffer());
       var range = response.headers.get("content-range");
       var match = range && range.match(/bytes\s+(\d+)-(\d+)\/(\d+)/i);
@@ -258,19 +268,46 @@
         rangeStart !== start ||
         rangeEnd < rangeStart ||
         rangeEnd >= rangeTotal ||
+        rangeEnd !== Math.min(end, rangeTotal - 1) ||
         bytes.length !== rangeEnd - rangeStart + 1
       ) {
         throw new Error("Music relay returned a mismatched byte range.");
       }
       if (rangeTotal > MAX_MEDIA_BYTES) throw new Error("This song is too large for the Chromebook relay.");
-      if (total !== null && total !== rangeTotal) throw new Error("Music relay changed the song length during download.");
-      total = rangeTotal;
-      chunks.push(bytes);
-      start = rangeEnd + 1;
+      if (expectedTotal !== null && expectedTotal !== rangeTotal) {
+        throw new Error("Music relay changed the song length during download.");
+      }
+      return {
+        bytes: bytes,
+        total: rangeTotal,
+        end: rangeEnd,
+        contentType: response.headers.get("content-type") || "audio/mp4"
+      };
+  }
+
+  async function downloadRelayedMedia(url, signal) {
+    var first = await fetchRelayedMediaRange(url, 0, MEDIA_CHUNK_BYTES - 1, null, signal);
+    var total = first.total;
+    var chunks = [first.bytes];
+    var ranges = [];
+
+    for (var start = first.end + 1; start < total; start += MEDIA_CHUNK_BYTES) {
+      ranges.push({ start: start, end: Math.min(start + MEDIA_CHUNK_BYTES - 1, total - 1) });
     }
 
-    if (total === null || start !== total) throw new Error("Music relay did not return the complete song.");
-    return new Blob(chunks, { type: contentType });
+    for (var index = 0; index < ranges.length; index += MEDIA_PARALLEL_RANGES) {
+      var batch = ranges.slice(index, index + MEDIA_PARALLEL_RANGES);
+      var results = await Promise.all(batch.map(function (item) {
+        return fetchRelayedMediaRange(url, item.start, item.end, total, signal);
+      }));
+      for (var resultIndex = 0; resultIndex < results.length; resultIndex += 1) {
+        chunks.push(results[resultIndex].bytes);
+      }
+    }
+
+    var received = chunks.reduce(function (sum, chunk) { return sum + chunk.length; }, 0);
+    if (received !== total) throw new Error("Music relay did not return the complete song.");
+    return new Blob(chunks, { type: first.contentType });
   }
 
   function installMediaRelay() {
@@ -284,12 +321,84 @@
 
     var state = new WeakMap();
 
+    function removeListeners(element, current) {
+      if (!current || typeof element.removeEventListener !== "function") return;
+      if (current.onPlayable) {
+        element.removeEventListener("canplay", current.onPlayable);
+        element.removeEventListener("playing", current.onPlayable);
+      }
+      if (current.onError) element.removeEventListener("error", current.onError);
+    }
+
     function clear(element) {
       var current = state.get(element);
       if (!current) return;
-      current.controller.abort();
+      removeListeners(element, current);
+      if (current.watchdog) window.clearTimeout(current.watchdog);
+      if (current.controller) current.controller.abort();
       if (current.objectUrl) URL.revokeObjectURL(current.objectUrl);
       state.delete(element);
+    }
+
+    function getProgressiveMusicUrl(target) {
+      return "https://proxy.cors.sh/" + target.href;
+    }
+
+    function startFallback(element, current, reason) {
+      if (state.get(element) !== current) return Promise.reject(new DOMException("Playback was cancelled.", "AbortError"));
+      if (current.fallbackPromise) return current.fallbackPromise;
+
+      current.mode = "fallback";
+      current.error = null;
+      current.controller = new AbortController();
+      if (current.watchdog) {
+        window.clearTimeout(current.watchdog);
+        current.watchdog = 0;
+      }
+      removeListeners(element, current);
+      nativePause.call(element);
+      nativeRemoveAttribute.call(element, "src");
+
+      current.fallbackPromise = downloadRelayedMedia(current.target, current.controller.signal).then(function (blob) {
+        if (state.get(element) !== current) throw new DOMException("Playback was cancelled.", "AbortError");
+        current.objectUrl = URL.createObjectURL(blob);
+        current.mode = "ready";
+        descriptor.set.call(element, current.objectUrl);
+        nativeLoad.call(element);
+        return current.objectUrl;
+      }).catch(function (error) {
+        if (state.get(element) !== current) throw error;
+        current.mode = "failed";
+        current.error = error instanceof Error ? error : new Error("The full song could not be verified.");
+        nativeRemoveAttribute.call(element, "src");
+        throw current.error;
+      });
+      if (current.resolveFallbackStarted) current.resolveFallbackStarted(current.fallbackPromise);
+      current.fallbackPromise.catch(function () {});
+      if (reason && window.console && typeof window.console.warn === "function") {
+        window.console.warn("Direct full-song streaming failed; using the verified relay fallback.", reason);
+      }
+      return current.fallbackPromise;
+    }
+
+    function resumeAfterFallback(element, current) {
+      if (current.resumePromise) return current.resumePromise;
+      current.resumePromise = current.fallbackPromise.then(function () {
+        if (state.get(element) !== current || !current.playRequested) {
+          throw new DOMException("Playback was cancelled.", "AbortError");
+        }
+        return nativePlay.call(element);
+      });
+      return current.resumePromise;
+    }
+
+    function startWatchdog(element, current) {
+      if (current.watchdog || current.mode !== "direct") return;
+      current.watchdog = window.setTimeout(function () {
+        current.watchdog = 0;
+        if (state.get(element) !== current || current.mode !== "direct") return;
+        startFallback(element, current, new Error("The direct music stream did not become playable in time.")).catch(function () {});
+      }, MUSIC_STARTUP_TIMEOUT_MS);
     }
 
     Object.defineProperty(HTMLMediaElement.prototype, "src", {
@@ -306,53 +415,96 @@
 
         var element = this;
         var current = {
-          controller: new AbortController(),
+          controller: null,
+          target: target,
           objectUrl: "",
-          pending: true,
+          mode: "direct",
           playRequested: false,
           error: null,
-          ready: null
+          fallbackPromise: null,
+          fallbackStarted: null,
+          resolveFallbackStarted: null,
+          resumePromise: null,
+          watchdog: 0,
+          onPlayable: null,
+          onError: null
         };
+        current.fallbackStarted = new Promise(function (resolve) { current.resolveFallbackStarted = resolve; });
         state.set(element, current);
-        nativeRemoveAttribute.call(element, "src");
-        current.ready = downloadRelayedMedia(target, current.controller.signal).then(function (blob) {
-          if (state.get(element) !== current) return;
-          current.objectUrl = URL.createObjectURL(blob);
-          current.pending = false;
-          descriptor.set.call(element, current.objectUrl);
-          nativeLoad.call(element);
-        }).catch(function (error) {
-          if (state.get(element) !== current) return;
-          current.pending = false;
-          current.error = error instanceof Error ? error : new Error("The full song could not be verified.");
-          nativeRemoveAttribute.call(element, "src");
-        });
+        current.onPlayable = function () {
+          if (state.get(element) !== current || current.mode !== "direct") return;
+          if (current.watchdog) {
+            window.clearTimeout(current.watchdog);
+            current.watchdog = 0;
+          }
+          removeListeners(element, current);
+        };
+        current.onError = function () {
+          if (state.get(element) !== current || current.mode !== "direct") return;
+          startFallback(element, current, element.error || new Error("The direct music stream failed.")).catch(function () {});
+        };
+        if (typeof element.addEventListener === "function") {
+          element.addEventListener("canplay", current.onPlayable);
+          element.addEventListener("playing", current.onPlayable);
+          element.addEventListener("error", current.onError);
+        }
+
+        // The CORS proxy preserves byte ranges, so the browser can start a full
+        // song after only its opening bytes instead of waiting for Apps Script to
+        // base64-transfer and assemble the entire file first.
+        descriptor.set.call(element, getProgressiveMusicUrl(target));
       }
     });
 
     HTMLMediaElement.prototype.load = function () {
       var current = state.get(this);
-      if (current && current.pending) return;
+      if (current && current.mode === "fallback") return;
       return nativeLoad.call(this);
     };
 
     HTMLMediaElement.prototype.play = function () {
       var element = this;
       var current = state.get(element);
-      if (!current || !current.pending) return nativePlay.call(element);
+      if (!current) return nativePlay.call(element);
       current.playRequested = true;
-      return current.ready.then(function () {
-        if (state.get(element) !== current || !current.playRequested) {
-          throw new DOMException("Playback was cancelled.", "AbortError");
+      if (current.mode === "fallback") {
+        return resumeAfterFallback(element, current);
+      }
+      if (current.mode === "failed") return Promise.reject(current.error);
+      if (current.mode === "ready") return nativePlay.call(element);
+
+      startWatchdog(element, current);
+      var directPlay = Promise.resolve(nativePlay.call(element));
+      return Promise.race([
+        directPlay.then(function () {
+          if (current.watchdog) {
+            window.clearTimeout(current.watchdog);
+            current.watchdog = 0;
+          }
+          return "direct";
+        }),
+        current.fallbackStarted.then(function () { return "fallback"; })
+      ]).then(function (mode) {
+        if (mode === "direct") return;
+        return resumeAfterFallback(element, current);
+      }).catch(function (error) {
+        if (state.get(element) !== current || !current.playRequested) throw error;
+        if (error && (error.name === "NotAllowedError" || error.name === "AbortError")) {
+          if (current.watchdog) {
+            window.clearTimeout(current.watchdog);
+            current.watchdog = 0;
+          }
+          throw error;
         }
-        if (current.error) throw current.error;
-        return nativePlay.call(element);
+        return startFallback(element, current, error).then(function () {
+          return resumeAfterFallback(element, current);
+        });
       });
     };
 
     HTMLMediaElement.prototype.pause = function () {
       var current = state.get(this);
-      if (current && current.pending) current.playRequested = false;
+      if (current) current.playRequested = false;
       return nativePause.call(this);
     };
 

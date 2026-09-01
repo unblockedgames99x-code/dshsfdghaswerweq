@@ -63,7 +63,7 @@
   }
 
   function smallScreen() {
-    return window.matchMedia("(max-width: 720px)").matches;
+    return window.matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1366px), (max-height: 500px) and (max-width: 960px)").matches;
   }
 
   function limits(win) {
@@ -208,6 +208,10 @@
   }
 
   function createSnapLayouts(win, controls, trigger) {
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      trigger.title = "Fullscreen";
+      return;
+    }
     var panel = document.createElement("div");
     panel.className = "neo-snap-layouts";
     panel.setAttribute("role", "group");
@@ -490,11 +494,15 @@
   document.addEventListener("pointermove", moveResize);
   document.addEventListener("pointerup", endResize);
   document.addEventListener("pointercancel", endResize);
+  document.addEventListener("lostpointercapture", endResize);
   document.addEventListener("keydown", keyboardResize);
   document.addEventListener("keydown", handleTabFullscreenShortcut, true);
   document.addEventListener("click", leaveSnapForWindowAction, true);
   document.addEventListener("click", handleFullscreenButton);
   window.addEventListener("resize", syncSnapTaskbar);
+  window.addEventListener("neo-taskbar-layout-change", function () {
+    requestAnimationFrame(syncSnapTaskbar);
+  });
   document.addEventListener("pointerdown", function (event) {
     if (openSnapPanel && !event.target.closest(".neo-snap-layouts, [data-window-action='fullscreen']")) hideSnapLayouts();
   }, true);

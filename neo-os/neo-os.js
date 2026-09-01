@@ -14,7 +14,7 @@
   var MUSIC_MODE_KEY = "neo_os_music_mode_v1";
   var WALLPAPER_DB = "neo_os_wallpapers";
   var WALLPAPER_STORE = "assets";
-  var NEO_CHAT_POLL_MS = 4500;
+  var NEO_CHAT_POLL_MS = 8000;
   var NEO_CHAT_SLOW_MODE_MS = 5000;
   var root = document.documentElement;
   var windowLayer = document.getElementById("window-layer");
@@ -67,21 +67,23 @@
   var onlineWallpaperRequestSerial = 0;
   var shellApi = null;
 
-  function removeLegacyMessagesUi() {
-    var gate = document.getElementById("neo-login-gate");
-    if (gate) gate.remove();
-    document.querySelectorAll('[data-app="chat"], [data-open-chat-section], [data-topbar-account]').forEach(function (element) {
-      element.remove();
-    });
-  }
-
   function normalizePerformanceMode(value) {
     value = String(value || "").toLowerCase();
     return value === "performance" || value === "ultimate" ? value : "normal";
   }
 
+  function normalizeTaskbarPosition(value) {
+    value = String(value || "").toLowerCase();
+    return value === "top" || value === "right" || value === "bottom" ? value : "left";
+  }
+
+  function normalizeTaskbarStyle(value) {
+    value = String(value || "").toLowerCase();
+    return value === "transparent" || value === "typical" ? value : "current";
+  }
+
   var defaultSettings = {
-    designVersion: 14,
+    designVersion: 15,
     wallpaper: "we-steam-1403160205",
     wallpaperFavorites: [],
     wallpaperRecent: [],
@@ -100,11 +102,11 @@
     widgets: true,
     widgetLock: true,
     dockMagnify: true,
-    taskbarMaterial: "clear",
-    taskbarOpacity: 0,
-    taskbarTint: "#000000",
+    taskbarPosition: "left",
+    taskbarStyle: "current",
+    taskbarTint: "#767c84",
+    taskbarTintStrength: 38,
     taskbarAccent: "#ffffff",
-    taskbarBlur: 0,
     reduceMotion: false,
     performanceMode: "normal"
   };
@@ -113,14 +115,8 @@
   var savedDesignVersion = Number(savedSettings.designVersion) || 0;
   if (!Array.isArray(savedSettings.wallpaperFavorites)) savedSettings.wallpaperFavorites = [];
   if (!Array.isArray(savedSettings.wallpaperRecent)) savedSettings.wallpaperRecent = [];
-  if (savedDesignVersion < 8) {
-    savedSettings.taskbarMaterial = "clear";
-    savedSettings.taskbarOpacity = 0;
-    savedSettings.taskbarBlur = 0;
-  }
   if (savedDesignVersion < 9) savedSettings.wallpaperSpeed = 1;
   if (savedDesignVersion < 10) {
-    savedSettings.taskbarTint = "#000000";
     savedSettings.taskbarAccent = "#ffffff";
   }
   if (savedDesignVersion < 11) {
@@ -136,9 +132,27 @@
   if (savedDesignVersion < 14 && !savedSettings.performanceMode) {
     savedSettings.performanceMode = savedSettings.performance === "low" ? "performance" : "normal";
   }
+  if (savedDesignVersion < 15) {
+    savedSettings.taskbarPosition = "left";
+    savedSettings.taskbarStyle = "current";
+    savedSettings.taskbarTint = "#767c84";
+    savedSettings.taskbarTintStrength = 38;
+  }
   savedSettings.performanceMode = normalizePerformanceMode(savedSettings.performanceMode);
+  savedSettings.taskbarPosition = normalizeTaskbarPosition(savedSettings.taskbarPosition);
+  savedSettings.taskbarStyle = normalizeTaskbarStyle(savedSettings.taskbarStyle);
+  savedSettings.taskbarTint = /^#[0-9a-f]{6}$/i.test(String(savedSettings.taskbarTint || ""))
+    ? String(savedSettings.taskbarTint).toLowerCase()
+    : "#767c84";
+  var savedTaskbarTintStrength = Number(savedSettings.taskbarTintStrength);
+  savedSettings.taskbarTintStrength = Number.isFinite(savedTaskbarTintStrength)
+    ? clamp(savedTaskbarTintStrength, 0, 100)
+    : 38;
   delete savedSettings.performance;
-  savedSettings.designVersion = 14;
+  delete savedSettings.taskbarMaterial;
+  delete savedSettings.taskbarOpacity;
+  delete savedSettings.taskbarBlur;
+  savedSettings.designVersion = 15;
   var settings = Object.assign({}, defaultSettings, savedSettings);
   settings.wallpaperMuted = true;
   settings.wallpaperPaused = false;
@@ -154,7 +168,7 @@
       accessibleName: "Web app",
       subtitle: "Private DuckDuckGo search",
       icon: "duckduckgo",
-      route: "./NEO-BROWSER/index.html?v=20260831-inflow-autohide-v1",
+      route: "./NEO-BROWSER/index.html?v=20260901-single-hover-bar-v1",
       keepAlive: true,
       width: 1080,
       height: 720,
@@ -181,8 +195,8 @@
     },
     zones: {
       id: "zones",
-      title: "HTML Games",
-      subtitle: "Your complete HTML game catalog",
+      title: "Games",
+      subtitle: "NEO Games",
       icon: "html-games",
       template: "library-template",
       width: 1180,
@@ -192,6 +206,20 @@
       core: true,
       category: "Games",
       aliases: ["html games", "games", "play", "arcade", "catalog", "zones"]
+    },
+    chat: {
+      id: "chat",
+      title: "NEO Chat",
+      subtitle: "Conversations and shared spaces",
+      icon: "chat",
+      template: "messages-template",
+      width: 1180,
+      height: 760,
+      launcher: true,
+      pinned: true,
+      core: true,
+      category: "Social",
+      aliases: ["neo chat", "chat", "messages", "rooms", "spaces", "dm"]
     },
     music: {
       id: "music",
@@ -299,6 +327,10 @@
   writeJson(INSTALLED_APPS_KEY, Array.from(installedAppIds));
 
   var storedPinnedApps = readJson(PINNED_APPS_KEY, null);
+  if (Array.isArray(storedPinnedApps) && storedPinnedApps.length && storedPinnedApps.indexOf("chat") === -1) {
+    var chatInsertAt = Math.max(0, storedPinnedApps.indexOf("zones") + 1);
+    storedPinnedApps.splice(chatInsertAt, 0, "chat");
+  }
   if (Array.isArray(storedPinnedApps) && storedPinnedApps.length) {
     storedPinnedApps = storedPinnedApps.filter(function (id) { return Object.prototype.hasOwnProperty.call(apps, id); });
     Object.keys(apps).forEach(function (id) {
@@ -339,12 +371,13 @@
     }
     var imageIcons = {
       duckduckgo: "./assets/duckduckgo.png",
-      chat: "./assets/messages.png",
+      chat: "./assets/chat-circle.svg?v=20260901-chat-icon-polish-v1",
       "geometry-dash": "./assets/geometry-dash.png",
       "google-drive": "./assets/google-drive.svg?v=20260824-drive-logo-v3",
       wallpaper: "./assets/wallpaper-engine.png",
       "media-player": "./assets/media-player.svg?v=20260827-high-resolution-v1",
       "html-games": "./assets/html-games.svg?v=20260827-blue-controller-v1",
+      "neo-cloud": "./assets/neo-cloud.svg?v=20260901-cloud-logo-v2",
       zstream: "./assets/zstream.png?v=20260827-zstream-official-v1",
       discord: "./assets/discord-official.png?v=20260828-user-artwork-v2",
       youtube: "./assets/youtube-official.webp?v=20260828-user-artwork-v1"
@@ -803,7 +836,7 @@
   }
 
   function isSmallScreen() {
-    return window.matchMedia("(max-width: 720px)").matches;
+    return window.matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1366px), (max-height: 500px) and (max-width: 960px)").matches;
   }
 
   function systemPrefersReducedMotion() {
@@ -866,6 +899,8 @@
     options = options || {};
     var mode = performanceMode();
     var previousMode = normalizePerformanceMode(root.dataset.performanceMode);
+    var previousTaskbarPosition = normalizeTaskbarPosition(root.dataset.taskbarPosition);
+    var previousTaskbarStyle = normalizeTaskbarStyle(root.dataset.taskbarStyle);
     var wallpaper = settings.wallpaper;
     var previousWallpaper = root.dataset.wallpaper || wallpaper || "we-steam-1403160205";
     var wallpaperSettings = Object.assign({}, settings, {
@@ -883,14 +918,30 @@
     root.dataset.widgets = settings.widgets && mode !== "ultimate" ? "true" : "false";
     root.dataset.widgetLock = settings.widgetLock ? "true" : "false";
     root.dataset.dockMagnify = settings.dockMagnify && mode === "normal" ? "true" : "false";
-    root.dataset.taskbarMaterial = settings.taskbarMaterial;
+    settings.taskbarPosition = normalizeTaskbarPosition(settings.taskbarPosition);
+    settings.taskbarStyle = normalizeTaskbarStyle(settings.taskbarStyle);
+    settings.taskbarTint = /^#[0-9a-f]{6}$/i.test(String(settings.taskbarTint || ""))
+      ? String(settings.taskbarTint).toLowerCase()
+      : "#767c84";
+    settings.taskbarTintStrength = Number.isFinite(Number(settings.taskbarTintStrength))
+      ? clamp(Number(settings.taskbarTintStrength), 0, 100)
+      : 38;
+    var taskbarTintChannels = colorToRgb(settings.taskbarTint).split(", ").map(Number);
+    var taskbarTintLuminance = taskbarTintChannels[0] * 0.299 + taskbarTintChannels[1] * 0.587 + taskbarTintChannels[2] * 0.114;
+    var taskbarUsesLightSurface = settings.taskbarStyle !== "transparent"
+      && taskbarTintLuminance >= 178
+      && (settings.taskbarStyle === "typical" || settings.taskbarTintStrength >= 55);
+    root.dataset.taskbarPosition = settings.taskbarPosition;
+    root.dataset.taskbarStyle = settings.taskbarStyle;
+    root.dataset.taskbarTone = taskbarUsesLightSurface ? "light" : "dark";
     root.dataset.reduceMotion = wallpaperSettings.reduceMotion ? "true" : "false";
     root.dataset.performance = mode === "normal" ? "balanced" : "low";
     root.style.setProperty("--wallpaper-brightness", String(clamp(Number(settings.brightness), 45, 115) / 100));
     root.style.setProperty("--wallpaper-saturation", String(clamp(Number(settings.saturation), 0, 140) / 100));
     root.style.setProperty("--wallpaper-blur", clamp(Number(settings.blur), 0, 12) + "px");
-    root.style.setProperty("--neo-taskbar-opacity", String(clamp(Number(settings.taskbarOpacity), 0, 100) / 100));
     root.style.setProperty("--neo-taskbar-tint", colorToRgb(settings.taskbarTint));
+    root.style.setProperty("--neo-taskbar-tint-strength", String(settings.taskbarTintStrength / 100));
+    root.style.setProperty("--neo-taskbar-foreground", taskbarUsesLightSurface ? "#111317" : "#ffffff");
     root.style.setProperty("--neo-accent", accent.visible);
     root.style.setProperty("--neo-accent-visible", accent.visible);
     root.style.setProperty("--neo-accent-visible-rgb", accent.visibleRgb);
@@ -912,7 +963,6 @@
       } catch (error) {}
       try { frame.contentWindow.postMessage({ type: "neo-shell:performance-mode", mode: mode }, "*"); } catch (error) {}
     });
-    root.style.setProperty("--neo-taskbar-blur", clamp(Number(settings.taskbarBlur), 0, 40) + "px");
     if (wallpaperEngine) {
       wallpaperEngine.apply(wallpaper, wallpaperSettings).catch(function () {
         if (settings.wallpaper !== wallpaper) return;
@@ -929,6 +979,17 @@
     applyWidgetLayout();
     setupWeatherCanvas();
     updateWeatherEngine();
+    if (previousTaskbarPosition !== settings.taskbarPosition || previousTaskbarStyle !== settings.taskbarStyle) {
+      window.requestAnimationFrame(function () {
+        fitDockToViewport(document.getElementById("neo-dock"));
+        window.dispatchEvent(new CustomEvent("neo-taskbar-layout-change", {
+          detail: {
+            previous: { position: previousTaskbarPosition, style: previousTaskbarStyle },
+            current: { position: settings.taskbarPosition, style: settings.taskbarStyle }
+          }
+        }));
+      });
+    }
     if (previousMode !== mode) {
       renderDock();
       window.dispatchEvent(new CustomEvent("neo-performance-mode-change", {
@@ -959,10 +1020,25 @@
       if (name === "blur" || name === "taskbarBlur") output.textContent = settings[name] + "px";
       else output.textContent = settings[name] + "%";
     });
-    host.querySelectorAll("[data-taskbar-material]").forEach(function (button) {
-      var active = button.getAttribute("data-taskbar-material") === settings.taskbarMaterial;
+    host.querySelectorAll("[data-taskbar-position-option]").forEach(function (button) {
+      var active = button.getAttribute("data-taskbar-position-option") === settings.taskbarPosition;
       button.classList.toggle("is-selected", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    host.querySelectorAll("[data-taskbar-style-option]").forEach(function (button) {
+      var active = button.getAttribute("data-taskbar-style-option") === settings.taskbarStyle;
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    host.querySelectorAll("[data-taskbar-tint-preset]").forEach(function (button) {
+      var active = button.getAttribute("data-taskbar-tint-preset").toLowerCase() === String(settings.taskbarTint).toLowerCase();
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    host.querySelectorAll("[data-taskbar-options-summary]").forEach(function (summary) {
+      var position = settings.taskbarPosition.charAt(0).toUpperCase() + settings.taskbarPosition.slice(1);
+      var style = settings.taskbarStyle.charAt(0).toUpperCase() + settings.taskbarStyle.slice(1);
+      summary.textContent = position + " · " + style;
     });
     var mode = performanceMode();
     host.querySelectorAll("[data-performance-mode-button]").forEach(function (button) {
@@ -1055,8 +1131,8 @@
     var name = session.username || "Guest";
     if (initial) initial.textContent = session.id ? name.charAt(0).toUpperCase() : "?";
     button.classList.toggle("is-signed-in", Boolean(session.id));
-    button.title = session.id ? name : "Choose a name";
-    button.setAttribute("aria-label", session.id ? "Open Messages as " + name : "Choose a chat name");
+    button.title = session.id ? "NEO account: " + name : "Create NEO profile";
+    button.setAttribute("aria-label", session.id ? "Open NEO Chat as " + name : "Create a NEO Chat profile");
   }
 
   function initBatteryStatus() {
@@ -1105,7 +1181,7 @@
     button.className = "dock-button";
     button.type = "button";
     button.dataset.app = app.id;
-    button.draggable = true;
+    button.draggable = !window.matchMedia("(pointer: coarse)").matches;
     var accessibleName = appAccessibleName(app);
     if (!app.hideName) button.dataset.tooltip = app.title;
     button.setAttribute("aria-label", (minimized ? "Restore " : (win ? "Switch to " : "Open ")) + accessibleName);
@@ -1124,7 +1200,7 @@
     taskbar.style.removeProperty("--vertical-dock-hit");
     taskbar.style.removeProperty("--vertical-dock-art");
     taskbar.style.removeProperty("--vertical-dock-gap");
-    if (window.innerWidth <= 700) return;
+    if (settings.taskbarPosition !== "left" && settings.taskbarPosition !== "right") return;
 
     var count = dock.querySelectorAll(".dock-button").length;
     if (!count) return;
@@ -1134,8 +1210,9 @@
     var naturalGap = Math.min(7, Math.max(2, viewportHeight * 0.0065));
     var centerGap = Math.min(7, Math.max(3, viewportHeight * 0.007));
     var startHeight = 42;
-    var verticalPadding = viewportHeight <= 660 ? 12 : 16;
-    var available = viewportHeight - verticalPadding - startHeight - (centerGap * 2);
+    var verticalPadding = viewportHeight <= 660 ? 12 : 28;
+    var trayHeight = settings.taskbarStyle === "typical" ? 66 : 0;
+    var available = viewportHeight - verticalPadding - startHeight - trayHeight - (centerGap * 2);
     var fittedHit = Math.floor((available - (naturalGap * Math.max(0, count - 1))) / count);
     var hit = Math.max(28, Math.min(naturalHit, fittedHit));
     var gap = naturalGap;
@@ -1152,6 +1229,8 @@
   function renderDock() {
     var dock = document.getElementById("neo-dock");
     if (!dock) return;
+    var previousScrollLeft = dock.scrollLeft;
+    var previousScrollTop = dock.scrollTop;
     var visible = new Map();
     if (performanceMode() === "ultimate") {
       if (apps.control && apps.control.installed) visible.set("control", apps.control);
@@ -1164,6 +1243,10 @@
     dock.textContent = "";
     visible.forEach(function (app) { dock.appendChild(createDockButton(app)); });
     fitDockToViewport(dock);
+    requestAnimationFrame(function () {
+      dock.scrollLeft = previousScrollLeft;
+      dock.scrollTop = previousScrollTop;
+    });
   }
 
   function normalizePinnedAppOrder() {
@@ -1202,12 +1285,47 @@
     dock.dataset.reorderReady = "true";
     var draggedId = "";
     var dropTarget = null;
+    var touchTimer = 0;
+    var touchPointerId = null;
+    var touchStart = null;
+    var touchActive = false;
+    var suppressClickUntil = 0;
 
     function clearDropState() {
       dock.querySelectorAll(".is-dragging, .is-drop-before, .is-drop-after").forEach(function (button) {
         button.classList.remove("is-dragging", "is-drop-before", "is-drop-after");
       });
       dropTarget = null;
+    }
+
+    function markDropTarget(button, clientX, clientY) {
+      if (!button || button.dataset.app === draggedId) return;
+      if (dropTarget && dropTarget !== button) dropTarget.classList.remove("is-drop-before", "is-drop-after");
+      dropTarget = button;
+      var rect = button.getBoundingClientRect();
+      var vertical = getComputedStyle(dock).flexDirection === "column";
+      var placeAfter = vertical ? clientY >= rect.top + rect.height / 2 : clientX >= rect.left + rect.width / 2;
+      button.classList.toggle("is-drop-before", !placeAfter);
+      button.classList.toggle("is-drop-after", placeAfter);
+    }
+
+    function clearTouchTimer() {
+      if (touchTimer) window.clearTimeout(touchTimer);
+      touchTimer = 0;
+    }
+
+    function finishTouchReorder(event) {
+      if (touchPointerId == null || (event.pointerId != null && event.pointerId !== touchPointerId)) return;
+      clearTouchTimer();
+      if (touchActive) suppressClickUntil = Date.now() + 450;
+      if (touchActive && draggedId && dropTarget) {
+        reorderDockApp(draggedId, dropTarget.dataset.app, dropTarget.classList.contains("is-drop-after"));
+      }
+      draggedId = "";
+      touchPointerId = null;
+      touchStart = null;
+      touchActive = false;
+      clearDropState();
     }
 
     dock.addEventListener("dragstart", function (event) {
@@ -1225,13 +1343,7 @@
       if (!button || button.dataset.app === draggedId) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
-      if (dropTarget && dropTarget !== button) dropTarget.classList.remove("is-drop-before", "is-drop-after");
-      dropTarget = button;
-      var rect = button.getBoundingClientRect();
-      var vertical = getComputedStyle(dock).flexDirection === "column";
-      var placeAfter = vertical ? event.clientY >= rect.top + rect.height / 2 : event.clientX >= rect.left + rect.width / 2;
-      button.classList.toggle("is-drop-before", !placeAfter);
-      button.classList.toggle("is-drop-after", placeAfter);
+      markDropTarget(button, event.clientX, event.clientY);
     });
 
     dock.addEventListener("drop", function (event) {
@@ -1246,6 +1358,50 @@
       draggedId = "";
       clearDropState();
     });
+
+    dock.addEventListener("pointerdown", function (event) {
+      if ((event.pointerType !== "touch" && event.pointerType !== "pen") || !event.isPrimary) return;
+      var button = event.target.closest(".dock-button[data-app]");
+      if (!button) return;
+      clearTouchTimer();
+      touchPointerId = event.pointerId;
+      touchStart = { x: event.clientX, y: event.clientY, button: button };
+      touchTimer = window.setTimeout(function () {
+        if (!touchStart) return;
+        touchActive = true;
+        draggedId = button.dataset.app;
+        button.classList.add("is-dragging");
+        try { button.setPointerCapture(touchPointerId); } catch (error) {}
+        if (navigator.vibrate) {
+          try { navigator.vibrate(16); } catch (error) {}
+        }
+      }, 420);
+    }, { passive: true });
+
+    dock.addEventListener("pointermove", function (event) {
+      if (event.pointerId !== touchPointerId || !touchStart) return;
+      var distance = Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y);
+      if (!touchActive && distance > 12) {
+        clearTouchTimer();
+        touchPointerId = null;
+        touchStart = null;
+        return;
+      }
+      if (!touchActive) return;
+      event.preventDefault();
+      var target = document.elementFromPoint(event.clientX, event.clientY);
+      markDropTarget(target && target.closest ? target.closest(".dock-button[data-app]") : null, event.clientX, event.clientY);
+    }, { passive: false });
+
+    dock.addEventListener("pointerup", finishTouchReorder);
+    dock.addEventListener("pointercancel", finishTouchReorder);
+    dock.addEventListener("lostpointercapture", finishTouchReorder);
+    dock.addEventListener("click", function (event) {
+      if (Date.now() < suppressClickUntil) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
   }
 
   function setAppPinned(id, pinned) {
@@ -1458,10 +1614,18 @@
       if (launcherDismissLayer) launcherDismissLayer.hidden = false;
       launcher.hidden = false;
       launcher.setAttribute("aria-hidden", "false");
+      renderLauncher();
       launcherSearch.value = "";
       launcherSelectedIndex = 0;
       filterLauncher("");
-      requestAnimationFrame(function () { launcherSearch.focus(); });
+      requestAnimationFrame(function () {
+        if (isSmallScreen()) {
+          launcher.tabIndex = -1;
+          launcher.focus({ preventScroll: true });
+        } else {
+          launcherSearch.focus();
+        }
+      });
     } else {
       launcher.hidden = true;
       launcher.setAttribute("aria-hidden", "true");
@@ -1602,12 +1766,12 @@
       if (!document.querySelector('link[data-neo-files]')) {
         var style = document.createElement("link");
         style.rel = "stylesheet";
-        style.href = "./neo-files.css?v=20260830-file-toolbar-v2";
+        style.href = "./neo-files.css?v=20260901-mobile-compat-v1";
         style.dataset.neoFiles = "";
         document.head.appendChild(style);
       }
       var script = document.createElement("script");
-      script.src = "./neo-files.js?v=20260828-open-file-copy-v1";
+      script.src = "./neo-files.js?v=20260901-mobile-compat-v1";
       script.async = true;
       script.onload = function () {
         if (!window.NEO_FILES) {
@@ -1629,7 +1793,7 @@
       var existing = document.getElementById("neo-browse-runtime-script");
       var script = existing || document.createElement("script");
       script.id = "neo-browse-runtime-script";
-      script.src = "./neo-browser-runtime.js?v=20260830-no-cdn-fallthrough-v69";
+      script.src = "./neo-browser-runtime.js?v=20260901-youtube-recovery-v1";
       script.async = true;
       script.onload = function () {
         if (!window.NEO_BROWSER_ENGINE) {
@@ -1911,24 +2075,24 @@
 
     function openSignInPage() {
       stopRequest();
-      currentQuery = "Choose a name";
+      currentQuery = "NEO account";
       currentTarget = "";
       input.value = currentQuery;
       content.textContent = "";
       setBrowserState("loading");
-       import("./neo-account-signin.js?v=5").then(function (runtime) {
-        if(currentQuery!=="Choose a name")return;
+       import("./neo-account-signin.js?v=20260901-production-auth-v1").then(function (runtime) {
+        if (currentQuery !== "NEO account") return;
         signInStop = runtime.mountAccountSignIn(content, function () { setBrowserState("content"); }, function (payload) {
           window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: payload.user } }));
           showToast("Chat ready", "You are now " + payload.user.username + ".", "chat");
           window.setTimeout(function () { openApp("chat"); }, 350);
         }, {
-          title: "Choose your name",
-          copy: "This is how you will appear in Global Chat.",
-          success: "Name saved. Opening Global Chat..."
+          title: "Sign in to NEO",
+          copy: "Use your username and password, or create a new account.",
+          success: "Account ready. Opening NEO Chat..."
         });
       }).catch(function () {
-        if(currentQuery==="Choose a name")setBrowserState("error","Name service unavailable.");
+        if (currentQuery === "NEO account") setBrowserState("error", "NEO account setup is unavailable.");
       });
     }
 
@@ -2004,45 +2168,39 @@
   }
 
   function nativeChatSession() {
+    if (window.NEO_ACCOUNT_STORE) {
+      var active = window.NEO_ACCOUNT_STORE.active();
+      if (active && active.token && active.user && active.user.id && active.user.username) {
+        return {
+          username: String(active.user.username),
+          id: String(active.user.id),
+          token: String(active.token),
+          transport: String(active.transport || active.user.transport || "")
+        };
+      }
+    }
     var token = "";
-    var username = "";
     try { token = localStorage.getItem("ugp_token") || ""; } catch (error) {}
     if (token.indexOf("static-firebase:") === 0) {
-      try { username = decodeURIComponent(token.slice(16)); } catch (error) {}
+      try {
+        localStorage.removeItem("ugp_token");
+        localStorage.removeItem("ugp_session");
+      } catch (error) {}
+      token = "";
     }
     var session = readJson("ugp_session", {}) || {};
-    username = token ? String(username || session.username || session.id || "").trim() : "";
-    return { username: username, id: token && username ? nativeChatKey(username) : "", token: token && username ? token : "" };
-  }
-
-  function nativeChatEndpoint(path) {
-    var endpoint = String(path || "");
-    if (!endpoint.startsWith("/")) endpoint = "/" + endpoint;
-    return window.location.protocol === "file:"
-      ? "http://127.0.0.1:4195" + endpoint
-      : endpoint;
+    var username = token ? String(session.username || "").trim() : "";
+    var id = token ? String(session.id || "").trim() : "";
+    return { username: username, id: token && username && id ? id : "", token: token && username && id ? token : "", transport: String(session.transport || "") };
   }
 
   function nativeChatStateRequest(session, parentSignal, compact) {
+    if (!window.NEO_CHAT_TRANSPORT) return Promise.reject(new Error("NEO Chat transport is unavailable."));
     var controller = new AbortController();
     var timer = window.setTimeout(function () { controller.abort(); }, 6500);
     var abort = function () { controller.abort(); };
     if (parentSignal) parentSignal.addEventListener("abort", abort, { once: true });
-    return fetch(nativeChatEndpoint("/.netlify/functions/chat-state" + (compact ? "?compact=1" : "")), {
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { Authorization: "Bearer " + String(session && session.token || "") },
-      signal: controller.signal
-    }).then(function (response) {
-      return response.json().catch(function () { return {}; }).then(function (payload) {
-        if (!response.ok) {
-          var requestError = new Error(payload.detail || "Messages could not connect.");
-          requestError.status = response.status;
-          throw requestError;
-        }
-        return payload;
-      });
-    }).finally(function () {
+    return window.NEO_CHAT_TRANSPORT.state(String(session && session.token || ""), Boolean(compact), controller.signal).finally(function () {
       window.clearTimeout(timer);
       if (parentSignal) parentSignal.removeEventListener("abort", abort);
     });
@@ -2059,6 +2217,7 @@
         id: String(message.id || entry[0]),
         clientId: String(message.clientId || ""),
         room: String(message.room || "global"),
+        userId: String(message.userId || ""),
         user: String(message.user || message.username || "Guest"),
         text: String(message.text || message.body || message.message || ""),
         time: Number(message.time || message.createdAt || message.updatedAt || 0)
@@ -2068,12 +2227,14 @@
 
   function nativeChatMembers(room) {
     var source = Array.isArray(room && room.members) ? room.members : (room && room.members && typeof room.members === "object" ? Object.keys(room.members) : []);
-    return source.map(function (member) { return nativeChatKey(typeof member === "string" ? member : member && (member.id || member.username)); }).filter(Boolean);
+    return source.map(function (member) { return String(typeof member === "string" ? member : member && (member.id || member.username) || "").trim(); }).filter(Boolean);
   }
 
   function nativeChatAccount(accounts, id) {
     if (accounts[id]) return accounts[id];
-    return Object.values(accounts).find(function (account) { return nativeChatKey(account && (account.username || account.id)) === id; }) || {};
+    return Object.values(accounts).find(function (account) {
+      return String(account && account.id || "") === String(id || "") || nativeChatKey(account && account.username) === nativeChatKey(id);
+    }) || {};
   }
 
   function nativeChatAvatar(account) {
@@ -2119,9 +2280,13 @@
     var input = app.querySelector("[data-chat-input]");
     var form = app.querySelector("[data-chat-form]");
     var sendButton = app.querySelector("[data-chat-send]");
+    var attachButton = app.querySelector("[data-chat-attach]");
+    var attachmentInput = app.querySelector("[data-chat-attachment-input]");
+    var attachmentPreview = app.querySelector("[data-chat-attachment-preview]");
     var feedback = app.querySelector("[data-chat-feedback]");
     var accountTag = app.querySelector("[data-chat-account]");
     var signInButton = app.querySelector("[data-chat-sign-in]");
+    var signOutButton = app.querySelector("[data-chat-sign-out]");
     var connection = app.querySelector("[data-chat-connection]");
     var connectionDot = app.querySelector("[data-chat-connection-dot]");
     var title = app.querySelector("[data-chat-title]");
@@ -2133,7 +2298,13 @@
     var profileStatus = app.querySelector("[data-chat-profile-status]");
     var profileFeedback = app.querySelector("[data-chat-profile-feedback]");
     var profileDm = app.querySelector("[data-chat-profile-dm]");
-    var state = { session: null, accounts: {}, rooms: {}, recent: [], local: {}, people: [], selected: "global", profileUser: "", loading: true, error: "", search: "", searchTimer: 0, searchController: null, controller: null, refreshRequest: null, poll: 0, pollFailures: 0, loadVersion: 0, pendingCount: 0, sendRequests: {}, slowUntil: 0, slowTimer: 0, destroyed: false };
+    var state = { session: null, accounts: {}, rooms: {}, recent: [], local: {}, people: [], selected: "global", profileUser: "", attachment: null, loading: true, error: "", search: "", searchTimer: 0, searchController: null, controller: null, refreshRequest: null, poll: 0, pollFailures: 0, loadVersion: 0, pendingCount: 0, sendRequests: {}, slowUntil: 0, slowTimer: 0, destroyed: false };
+    var messagesResizeObserver = null;
+
+    function isCompactChat() {
+      var width = app.getBoundingClientRect().width || (hostWindow ? hostWindow.clientWidth : 0);
+      return isSmallScreen() || (width > 0 && width <= 760);
+    }
 
     function roomObjects() {
       if (!state.session || !state.session.id) return [];
@@ -2190,7 +2361,7 @@
       connectionDot.setAttribute("aria-label", online ? "Online" : text);
     }
     function canCompose() {
-      return Boolean(state.session && state.session.id && state.session.token && !state.loading && !state.error && state.accounts[state.session.id]);
+      return Boolean(state.session && state.session.id && state.session.token && !state.loading && !state.error && !state.pendingCount && state.accounts[state.session.id]);
     }
     function slowModeRemaining() {
       return Math.max(0, Number(state.slowUntil || 0) - Date.now());
@@ -2198,8 +2369,70 @@
     function syncComposerState() {
       var enabled = canCompose();
       input.disabled = !enabled;
-      sendButton.disabled = !enabled || slowModeRemaining() > 0 || !String(input.value || "").trim();
+      if (attachButton) attachButton.disabled = !enabled;
+      sendButton.disabled = !enabled || slowModeRemaining() > 0 || (!String(input.value || "").trim() && !state.attachment);
       form.setAttribute("aria-busy", state.pendingCount ? "true" : "false");
+    }
+
+    function formatAttachmentSize(bytes) {
+      var value = Math.max(0, Number(bytes || 0));
+      if (value < 1024) return value + " B";
+      if (value < 1024 * 1024) return Math.round(value / 1024) + " KB";
+      return (value / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function clearAttachment() {
+      state.attachment = null;
+      if (attachmentInput) attachmentInput.value = "";
+      if (attachmentPreview) {
+        attachmentPreview.textContent = "";
+        attachmentPreview.hidden = true;
+      }
+      syncComposerState();
+    }
+
+    function renderAttachmentDraft() {
+      if (!attachmentPreview) return;
+      attachmentPreview.textContent = "";
+      if (!state.attachment) { attachmentPreview.hidden = true; return; }
+      var draft = state.attachment;
+      var kind = String(draft.type || "").split("/")[0];
+      if (kind === "image") {
+        var image = document.createElement("img"); image.src = draft.dataUrl; image.alt = "Selected image"; attachmentPreview.appendChild(image);
+      } else if (kind === "video") {
+        var video = document.createElement("video"); video.src = draft.dataUrl; video.muted = true; video.playsInline = true; attachmentPreview.appendChild(video);
+      } else if (kind === "audio") {
+        var audio = document.createElement("audio"); audio.src = draft.dataUrl; audio.controls = true; attachmentPreview.appendChild(audio);
+      }
+      var copy = document.createElement("span");
+      copy.className = "messages-attachment-copy";
+      var strong = document.createElement("strong"); strong.textContent = draft.name;
+      var small = document.createElement("small"); small.textContent = (draft.type || "File") + " · " + formatAttachmentSize(draft.size);
+      copy.append(strong, small);
+      var remove = document.createElement("button");
+      remove.type = "button"; remove.className = "messages-attachment-remove"; remove.dataset.chatAttachmentRemove = ""; remove.setAttribute("aria-label", "Remove attachment");
+      remove.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>';
+      attachmentPreview.append(copy, remove);
+      attachmentPreview.hidden = false;
+    }
+
+    function selectAttachment(file) {
+      if (!file) return;
+      var localOnly = window.NEO_CHAT_TRANSPORT && window.NEO_CHAT_TRANSPORT.mode() === "local";
+      var maximum = localOnly ? 750 * 1024 : 6 * 1024 * 1024;
+      if (file.size > maximum) { feedback.textContent = localOnly ? "Local preview attachments can be up to 750 KB." : "Attachments can be up to 6 MB."; return; }
+      var allowed = /^(image|video|audio)\//.test(file.type) || /^(application\/pdf|text\/plain|application\/(zip|x-zip-compressed))$/.test(file.type);
+      if (!allowed) { feedback.textContent = "Choose a photo, video, audio, PDF, text, or ZIP file."; return; }
+      var reader = new FileReader();
+      reader.onload = function () {
+        var dataUrl = String(reader.result || "");
+        state.attachment = { name: String(file.name || "Attachment").slice(0, 120), type: file.type || "application/octet-stream", size: file.size, dataUrl: dataUrl, dataBase64: dataUrl.split(",")[1] || "" };
+        feedback.textContent = "";
+        renderAttachmentDraft();
+        syncComposerState();
+      };
+      reader.onerror = function () { feedback.textContent = "That file could not be opened."; };
+      reader.readAsDataURL(file);
     }
     function beginSlowMode(duration) {
       window.clearInterval(state.slowTimer);
@@ -2227,18 +2460,21 @@
 
     function renderHeader() {
       if (!state.session || !state.session.id) {
-        title.textContent = "Messages";
-        subtitle.textContent = "Choose a name to continue";
-        thread.setAttribute("aria-label", "Messages name setup");
+        title.textContent = "NEO Chat";
+        subtitle.textContent = "Create a profile to continue";
+        thread.setAttribute("aria-label", "NEO Chat profile setup");
         headingAvatar.classList.remove("is-global");
-        applyNativeChatAvatar(headingAvatar, {}, "M");
+        applyNativeChatAvatar(headingAvatar, {}, "N");
         return;
       }
       var name = roomName(state.selected);
       var room = roomById(state.selected);
       var account = state.selected === "global" || isServerRoom(room) ? {} : otherRoomAccount(room || {});
       title.textContent = name;
-      subtitle.textContent = state.error ? "Unavailable" : (state.selected === "global" ? "Shared public conversation · Slow mode 5s" : (isServerRoom(room) ? "Public server · Slow mode 5s" : "Private conversation · Slow mode 5s"));
+      var localOnly = window.NEO_CHAT_TRANSPORT && window.NEO_CHAT_TRANSPORT.mode() === "local";
+      subtitle.textContent = state.error ? "Unavailable" : (state.selected === "global"
+        ? (localOnly ? "Device-only preview · Slow mode 5s" : "Shared public conversation · Slow mode 5s")
+        : (isServerRoom(room) ? "Shared space · Slow mode 5s" : "Private conversation · Slow mode 5s"));
       thread.setAttribute("aria-label", name + " messages");
       headingAvatar.classList.toggle("is-global", state.selected === "global");
       applyNativeChatAvatar(headingAvatar, account, state.selected === "global" ? "G" : name);
@@ -2267,7 +2503,7 @@
         var strong = document.createElement("strong");
         strong.textContent = roomName(id);
         var small = document.createElement("small");
-        small.textContent = latest ? ((nativeChatKey(latest.user) === (state.session && state.session.id) ? "You: " : "") + latest.text) : "No messages yet";
+        small.textContent = latest ? ((String(latest.userId || nativeChatKey(latest.user)) === (state.session && state.session.id) ? "You: " : "") + latest.text) : "No messages yet";
         copy.append(strong, small);
         var time = document.createElement("time");
         time.textContent = latest ? nativeChatTime(latest.time) : "";
@@ -2284,7 +2520,7 @@
         if (serverSection) serverSection.hidden = true;
         var signedOutCopy = document.createElement("p");
         signedOutCopy.className = "messages-room-empty";
-        signedOutCopy.textContent = "Choose a name to view your conversations.";
+        signedOutCopy.textContent = "Create a profile to view your conversations.";
         roomList.appendChild(signedOutCopy);
         return;
       }
@@ -2316,13 +2552,13 @@
 
       if (query) {
         state.people.filter(function (person) {
-          var id = nativeChatKey(person && person.username);
+          var id = String(person && person.id || nativeChatKey(person && person.username));
           return id && id !== (state.session && state.session.id) && !rooms.some(function (room) { return nativeChatMembers(room).includes(id); });
         }).forEach(function (person) {
           var button = document.createElement("button");
           button.type = "button";
           button.className = "messages-room messages-person-result";
-          button.dataset.chatUser = String(person.username || "");
+          button.dataset.chatUser = String(person.id || person.username || "");
           var avatar = document.createElement("span");
           avatar.className = "messages-avatar";
           applyNativeChatAvatar(avatar, person, person.username);
@@ -2379,14 +2615,14 @@
       icon.setAttribute("aria-hidden", "true");
       icon.innerHTML = '<svg class="icon"><use href="#i-chat"></use></svg>';
       var strong = document.createElement("strong");
-      strong.textContent = "Choose your name";
+      strong.textContent = "Create your NEO profile";
       var paragraph = document.createElement("p");
-      paragraph.textContent = "Pick a name to join Global Chat and direct messages.";
+      paragraph.textContent = "Choose a public handle to join shared spaces and direct messages.";
       var action = document.createElement("button");
       action.type = "button";
       action.className = "messages-auth-action";
-      action.textContent = "Choose name";
-      action.addEventListener("click", function () { openBrowserPage("sign-in", "Choose a name"); });
+      action.textContent = "Create profile";
+      action.addEventListener("click", function () { openBrowserPage("sign-in", "Create profile"); });
       box.append(icon, strong, paragraph, action);
       thread.appendChild(box);
     }
@@ -2394,14 +2630,15 @@
     function renderThread(forceBottom) {
       renderHeader();
       if (!state.session || !state.session.id || !state.session.token) { renderSignedOut(); return; }
-      if (state.loading) { threadState("Opening Messages", "Loading recent conversations.", true); return; }
-      if (state.error) { threadState("Messages unavailable", state.error, false); return; }
+      if (state.loading) { threadState("Opening NEO Chat", "Loading recent conversations.", true); return; }
+      if (state.error) { threadState("NEO Chat unavailable", state.error, false); return; }
       var rows = messagesFor(state.selected);
       if (!rows.length) { threadState("No messages yet", "Start the conversation when you are ready.", false); return; }
       var atBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 70;
       thread.textContent = "";
       rows.forEach(function (message, index) {
-        var own = nativeChatKey(message.user) === state.session.id;
+        var messageUserId = String(message.userId || nativeChatKey(message.user));
+        var own = messageUserId === state.session.id;
         var previous = rows[index - 1];
         var next = rows[index + 1];
         var messageDate = new Date(message.time || Date.now());
@@ -2415,8 +2652,8 @@
             : messageDate.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) + "  " + messageDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
           thread.appendChild(separator);
         }
-        var groupedWithPrevious = Boolean(previous && nativeChatKey(previous.user) === nativeChatKey(message.user) && message.time - previous.time < 300000 && previousDate.toDateString() === messageDate.toDateString());
-        var groupedWithNext = Boolean(next && nativeChatKey(next.user) === nativeChatKey(message.user) && next.time - message.time < 300000 && new Date(next.time || Date.now()).toDateString() === messageDate.toDateString());
+        var groupedWithPrevious = Boolean(previous && String(previous.userId || nativeChatKey(previous.user)) === messageUserId && message.time - previous.time < 300000 && previousDate.toDateString() === messageDate.toDateString());
+        var groupedWithNext = Boolean(next && String(next.userId || nativeChatKey(next.user)) === messageUserId && next.time - message.time < 300000 && new Date(next.time || Date.now()).toDateString() === messageDate.toDateString());
         var article = document.createElement("article");
         article.className = "native-message" + (own ? " is-own" : "") + (!groupedWithPrevious ? " is-group-start" : "") + (!groupedWithNext ? " is-group-end" : "") + (message.pending ? " is-pending" : "") + (message.failed ? " is-failed" : "");
         article.dataset.messageIdentity = messageIdentity(message);
@@ -2424,7 +2661,7 @@
           if (!groupedWithNext) {
             var avatar = document.createElement("span");
             avatar.className = "messages-avatar";
-            applyNativeChatAvatar(avatar, nativeChatAccount(state.accounts, nativeChatKey(message.user)), message.user);
+            applyNativeChatAvatar(avatar, nativeChatAccount(state.accounts, messageUserId), message.user);
             article.appendChild(avatar);
           } else {
             var avatarSpacer = document.createElement("span");
@@ -2440,13 +2677,27 @@
           author.type = "button";
           author.className = "native-message-author";
           author.textContent = message.user;
-          author.dataset.chatUser = message.user;
+          author.dataset.chatUser = messageUserId;
           author.setAttribute("aria-label", "Open " + message.user + " profile");
           body.appendChild(author);
         }
         var bubble = document.createElement("div");
-        bubble.className = "native-message-bubble";
-        bubble.textContent = message.text;
+        bubble.className = "native-message-bubble" + (message.attachment ? " has-attachment" : "");
+        if (message.attachment && message.attachment.url) {
+          var attachment = message.attachment;
+          var attachmentKind = String(attachment.type || "").split("/")[0];
+          var media;
+          if (attachmentKind === "image") { media = document.createElement("img"); media.src = attachment.previewUrl || attachment.url; media.alt = attachment.name || "Image"; }
+          else if (attachmentKind === "video") { media = document.createElement("video"); media.src = attachment.url; media.controls = true; media.playsInline = true; media.preload = "metadata"; }
+          else if (attachmentKind === "audio") { media = document.createElement("audio"); media.src = attachment.url; media.controls = true; media.preload = "metadata"; }
+          else {
+            media = document.createElement("span"); media.className = "native-message-file"; media.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg>';
+            var fileCopy = document.createElement("span"); var fileName = document.createElement("strong"); var fileSize = document.createElement("small");
+            fileName.textContent = attachment.name || "Attachment"; fileSize.textContent = formatAttachmentSize(attachment.size); fileCopy.append(fileName, fileSize); media.appendChild(fileCopy);
+          }
+          var attachmentLink = document.createElement("a"); attachmentLink.className = "native-message-attachment"; attachmentLink.href = attachment.url; attachmentLink.target = "_blank"; attachmentLink.rel = "noopener noreferrer"; attachmentLink.download = attachment.name || ""; attachmentLink.appendChild(media); bubble.appendChild(attachmentLink);
+        }
+        if (message.text) { var messageText = document.createElement("p"); messageText.className = "native-message-text"; messageText.textContent = message.text; bubble.appendChild(messageText); }
         bubble.title = messageDate.toLocaleString();
         var meta = document.createElement("time");
         meta.className = "native-message-meta";
@@ -2468,11 +2719,31 @@
       if (forceBottom || atBottom) requestAnimationFrame(function () { thread.scrollTop = thread.scrollHeight; });
     }
 
-    function renderAll(forceBottom) { renderRooms(); renderThread(forceBottom); }
+    function syncMobilePanes() {
+      var sidebar = app.querySelector(".messages-sidebar");
+      var conversation = app.querySelector(".messages-conversation");
+      if (!sidebar || !conversation) return;
+      var compact = isCompactChat();
+      app.classList.toggle("is-compact-layout", compact);
+      if (!compact) {
+        sidebar.inert = false;
+        conversation.inert = false;
+        sidebar.removeAttribute("aria-hidden");
+        conversation.removeAttribute("aria-hidden");
+        return;
+      }
+      var conversationOpen = app.classList.contains("is-conversation-open");
+      sidebar.inert = conversationOpen;
+      conversation.inert = !conversationOpen;
+      sidebar.setAttribute("aria-hidden", conversationOpen ? "true" : "false");
+      conversation.setAttribute("aria-hidden", conversationOpen ? "false" : "true");
+    }
+
+    function renderAll(forceBottom) { renderRooms(); renderThread(forceBottom); syncMobilePanes(); }
 
     function mergePeople(people) {
       (Array.isArray(people) ? people : []).forEach(function (person) {
-        var id = nativeChatKey(person && person.username);
+        var id = String(person && person.id || nativeChatKey(person && person.username));
         if (id) state.accounts[id] = Object.assign({}, state.accounts[id] || {}, person);
       });
     }
@@ -2487,16 +2758,8 @@
       if (state.searchController) state.searchController.abort();
       state.searchController = new AbortController();
       var controller = state.searchController;
-      fetch(nativeChatEndpoint("/.netlify/functions/search-chat-users?q=" + encodeURIComponent(clean)), {
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { Authorization: "Bearer " + state.session.token },
-        signal: controller.signal
-      }).then(function (response) {
-        return response.json().catch(function () { return {}; }).then(function (payload) {
-          if (!response.ok) throw new Error(payload.detail || "Could not search people.");
-          return payload.users || [];
-        });
+      window.NEO_CHAT_TRANSPORT.search(state.session.token, clean, false, controller.signal).then(function (payload) {
+        return payload && payload.users || [];
       }).then(function (people) {
         if (state.destroyed || controller !== state.searchController || clean !== state.search) return;
         state.people = people;
@@ -2510,28 +2773,24 @@
       });
     }
 
-    function showProfile(username) {
-      var clean = String(username || "").trim();
-      var id = nativeChatKey(clean);
+    function showProfile(identity) {
+      var clean = String(identity || "").trim();
+      var account = nativeChatAccount(state.accounts, clean);
+      var id = String(account.id || clean || "");
       if (!id || !profileDialog) return;
-      state.profileUser = clean;
-      var account = nativeChatAccount(state.accounts, id);
-      profileName.textContent = String(account.username || clean);
+      state.profileUser = id;
+      profileName.textContent = String(account.username || clean || "Member");
       profileStatus.textContent = String(account.bio || account.mood || "NEO member").slice(0, 120);
       profileFeedback.textContent = "";
-      profileDm.disabled = id === (state.session && state.session.id);
-      profileDm.querySelector("span").textContent = profileDm.disabled ? "This is you" : "Message";
-      applyNativeChatAvatar(profileAvatar, account, clean);
+      profileDm.disabled = id === (state.session && state.session.id) || id === "neo_system";
+      profileDm.querySelector("span").textContent = id === "neo_system" ? "System profile" : (profileDm.disabled ? "This is you" : "Message");
+      applyNativeChatAvatar(profileAvatar, account, account.username || clean);
       if (typeof profileDialog.showModal === "function" && !profileDialog.open) profileDialog.showModal();
       else profileDialog.setAttribute("open", "");
 
       if (state.session && state.session.token) {
-        fetch(nativeChatEndpoint("/.netlify/functions/search-chat-users?q=" + encodeURIComponent(clean) + "&exact=1"), {
-          credentials: "same-origin",
-          cache: "no-store",
-          headers: { Authorization: "Bearer " + state.session.token }
-        }).then(function (response) { return response.ok ? response.json() : { users: [] }; }).then(function (payload) {
-          if (state.profileUser !== clean || !payload.users || !payload.users[0]) return;
+        window.NEO_CHAT_TRANSPORT.search(state.session.token, account.username || clean, true).then(function (payload) {
+          if (state.profileUser !== id || !payload.users || !payload.users[0]) return;
           var person = payload.users[0];
           mergePeople([person]);
           profileName.textContent = person.username;
@@ -2541,22 +2800,13 @@
       }
     }
 
-    function startDirectMessage(username) {
-      var clean = String(username || "").trim();
+    function startDirectMessage(identity) {
+      var clean = String(identity || "").trim();
       if (!clean || !state.session || !state.session.token || profileDm.disabled) return;
       profileDm.disabled = true;
       profileFeedback.textContent = "Opening conversation...";
-      fetch(nativeChatEndpoint("/.netlify/functions/create-chat-room"), {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + state.session.token },
-        body: JSON.stringify({ username: clean })
-      }).then(function (response) {
-        return response.json().catch(function () { return {}; }).then(function (payload) {
-          if (!response.ok) throw new Error(payload.detail || "Could not start the conversation.");
-          return payload.room;
-        });
+      window.NEO_CHAT_TRANSPORT.createRoom(state.session.token, clean).then(function (payload) {
+        return payload && payload.room;
       }).then(function (room) {
         if (!room || !room.id) throw new Error("The conversation response was incomplete.");
         state.rooms[room.id] = room;
@@ -2618,6 +2868,15 @@
         setConnection("Online", true);
       }).catch(function (error) {
         if (state.destroyed) return;
+        if (error && (error.status === 401 || error.status === 403)) {
+          if (window.NEO_ACCOUNT_STORE) window.NEO_ACCOUNT_STORE.forget(sessionToken);
+          else {
+            try { localStorage.removeItem("ugp_token"); localStorage.removeItem("ugp_session"); } catch (storageError) {}
+          }
+          window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: null } }));
+          window.dispatchEvent(new CustomEvent("neo-account-picker"));
+          return;
+        }
         state.pollFailures += 1;
         if (!quiet || state.pollFailures >= 2) setConnection(quiet ? "Reconnecting..." : "Offline", false);
         if (!quiet) {
@@ -2633,7 +2892,7 @@
     function startPolling() {
       window.clearInterval(state.poll);
       state.poll = window.setInterval(function () {
-        if (!document.hidden && !state.destroyed) loadRecent(true);
+        if (!document.hidden && !state.destroyed && (!hostWindow || !hostWindow.classList.contains("is-minimized"))) loadRecent(true);
       }, NEO_CHAT_POLL_MS);
     }
 
@@ -2660,15 +2919,18 @@
       state.local = {};
       state.people = [];
       feedback.textContent = "";
-      accountTag.textContent = signedIn ? state.session.username : "Name required";
+      accountTag.textContent = signedIn
+        ? state.session.username + " · " + (window.NEO_CHAT_TRANSPORT ? window.NEO_CHAT_TRANSPORT.modeLabel() : "NEO Chat")
+        : "Guest mode";
       signInButton.hidden = signedIn;
+      if (signOutButton) signOutButton.hidden = !signedIn;
       searchInput.disabled = !signedIn;
       composeButton.disabled = !signedIn;
       app.classList.toggle("is-signed-out", !signedIn);
       input.value = "";
-      input.placeholder = signedIn ? "iMessage" : "Choose a name to message";
+      input.placeholder = signedIn ? "Message" : "Create a profile to message";
       syncComposerState();
-      setConnection(signedIn ? "Checking name..." : "Name not set", false);
+      setConnection(signedIn ? "Connecting..." : "Profile not set", false);
       renderAll();
       if (!signedIn) {
         state.loading = false;
@@ -2684,13 +2946,13 @@
         state.accounts = Object.assign({}, payload.profiles || {});
         state.loading = false;
         if (!linkedUsername) {
-          state.error = "This chat name is not linked to Messages.";
-          setConnection("Name not linked", false);
+          state.error = "This profile could not be resumed.";
+          setConnection("Profile unavailable", false);
         } else {
           state.accounts[state.session.id] = Object.assign({}, state.accounts[state.session.id] || {}, payload.account || {}, { username: linkedUsername });
           searchInput.disabled = false;
           composeButton.disabled = false;
-          input.placeholder = "iMessage";
+          input.placeholder = "Message";
           app.classList.remove("is-signed-out");
           setConnection("Online", true);
           startPolling();
@@ -2701,25 +2963,29 @@
         if (state.destroyed || loadVersion !== state.loadVersion) return;
         state.loading = false;
         if (error && (error.status === 401 || error.status === 403)) {
-          try {
-            localStorage.removeItem("ugp_token");
-            localStorage.removeItem("ugp_session");
-          } catch (storageError) {}
+          if (window.NEO_ACCOUNT_STORE) window.NEO_ACCOUNT_STORE.forget(state.session && state.session.token);
+          else {
+            try { localStorage.removeItem("ugp_token"); localStorage.removeItem("ugp_session"); } catch (storageError) {}
+          }
           state.session = { username: "", id: "", token: "" };
           state.error = "";
-          accountTag.textContent = "Name required";
+          accountTag.textContent = "Guest mode";
           signInButton.hidden = false;
+          if (signOutButton) signOutButton.hidden = true;
           searchInput.disabled = true;
           composeButton.disabled = true;
-          input.placeholder = "Choose a name to message";
+          input.placeholder = "Create a profile to message";
           app.classList.add("is-signed-out");
-          setConnection("Name not set", false);
+          setConnection("Profile not set", false);
           syncComposerState();
           renderAll();
+          window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: null } }));
+          window.dispatchEvent(new CustomEvent("neo-account-picker"));
           return;
         }
-        state.error = error && error.name === "AbortError" ? "The chat service took too long to respond." : (error && error.message ? error.message : "Could not connect to Messages.");
+        state.error = error && error.name === "AbortError" ? "The chat service took too long to respond." : (error && error.message ? error.message : "Could not connect to NEO Chat.");
         setConnection("Offline", false);
+        startPolling();
         syncComposerState();
         renderAll();
       });
@@ -2731,7 +2997,12 @@
       app.classList.add("is-conversation-open");
       feedback.textContent = "";
       renderAll(true);
-      input.focus({ preventScroll: true });
+      if (isCompactChat()) {
+        var backButton = app.querySelector("[data-chat-back]");
+        if (backButton) backButton.focus({ preventScroll: true });
+      } else {
+        input.focus({ preventScroll: true });
+      }
     }
 
     function createClientMessageId() {
@@ -2748,7 +3019,8 @@
 
     function sendMessage(text, retryMessage) {
       var clean = String(retryMessage ? retryMessage.text : text || "").trim();
-      if (!clean || !canCompose()) return;
+      var attachmentDraft = retryMessage ? retryMessage.attachment : state.attachment;
+      if ((!clean && !attachmentDraft) || !canCompose()) return;
       if (slowModeRemaining() > 0) {
         beginSlowMode(slowModeRemaining());
         return;
@@ -2764,8 +3036,10 @@
         id: clientId,
         clientId: clientId,
         room: roomId,
+        userId: state.session.id,
         user: state.session.username,
         text: clean,
+        attachment: attachmentDraft ? Object.assign({}, attachmentDraft, { url: attachmentDraft.url || attachmentDraft.dataUrl || "" }) : null,
         time: Date.now()
       };
       optimistic.pending = true;
@@ -2775,6 +3049,7 @@
       if (!retryMessage) {
         input.value = "";
         input.style.height = "38px";
+        clearAttachment();
       }
       feedback.textContent = "";
       state.pendingCount += 1;
@@ -2783,27 +3058,17 @@
 
       var requestVersion = state.loadVersion;
       var controller = new AbortController();
-      var timeout = window.setTimeout(function () { controller.abort(); }, 8_000);
+      var timeout = window.setTimeout(function () { controller.abort(); }, attachmentDraft ? 30_000 : 8_000);
       state.sendRequests[clientId] = controller;
-      fetch(nativeChatEndpoint("/.netlify/functions/send-chat-message"), {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + state.session.token },
-        body: JSON.stringify({ text: clean, roomId: roomId, clientId: clientId }),
-        signal: controller.signal
-      }).then(function (response) {
-        return response.json().catch(function () { return {}; }).then(function (payload) {
-          if (!response.ok) {
-            var requestError = new Error(payload.detail || (response.status === 404 ? "Message sending is unavailable right now." : "Could not send message."));
-            requestError.status = response.status;
-            requestError.code = payload.code || "";
-            requestError.retryAfterMs = Number(payload.retryAfterMs || 0);
-            throw requestError;
-          }
-          if (!payload.message) throw new Error("The message service returned an incomplete response.");
-          return payload.message;
-        });
+      var upload = attachmentDraft && attachmentDraft.dataBase64
+        ? window.NEO_CHAT_TRANSPORT.upload(state.session.token, attachmentDraft, controller.signal)
+        : Promise.resolve(attachmentDraft || null);
+      upload.then(function (uploadedAttachment) {
+        optimistic.attachment = uploadedAttachment || attachmentDraft || null;
+        return window.NEO_CHAT_TRANSPORT.send(state.session.token, clean, roomId, clientId, uploadedAttachment, controller.signal);
+      }).then(function (payload) {
+        if (!payload || !payload.message) throw new Error("The message service returned an incomplete response.");
+        return payload.message;
       }).then(function (message) {
         if (state.destroyed || requestVersion !== state.loadVersion) return;
         state.local[roomId] = (state.local[roomId] || []).filter(function (item) { return item.clientId !== clientId; });
@@ -2817,6 +3082,13 @@
         if (state.destroyed || requestVersion !== state.loadVersion) return;
         if (error && error.code === "slow_mode") {
           state.local[roomId] = (state.local[roomId] || []).filter(function (item) { return item.clientId !== clientId; });
+          if (!retryMessage && !input.value.trim()) {
+            input.value = clean;
+            input.style.height = "38px";
+            input.style.height = Math.min(input.scrollHeight, 92) + "px";
+          }
+          if (!retryMessage && attachmentDraft && !state.attachment) { state.attachment = attachmentDraft; renderAttachmentDraft(); }
+          feedback.textContent = "Slow mode is on. Your message is still ready to send.";
           beginSlowMode(error.retryAfterMs || NEO_CHAT_SLOW_MODE_MS);
           renderAll(true);
           return;
@@ -2839,6 +3111,7 @@
     }
 
     app.addEventListener("click", function (event) {
+      if (event.target.closest("[data-chat-attachment-remove]")) { event.preventDefault(); clearAttachment(); return; }
       var retry = event.target.closest("[data-chat-retry]");
       if (retry) {
         event.preventDefault();
@@ -2868,11 +3141,26 @@
       searchInput.focus({ preventScroll: true });
       searchInput.select();
     });
-    signInButton.addEventListener("click", function () { openBrowserPage("sign-in", "Choose a name"); });
-    app.querySelector("[data-chat-back]").addEventListener("click", function () { app.classList.remove("is-conversation-open"); });
+    signInButton.addEventListener("click", function () { window.dispatchEvent(new CustomEvent("neo-account-picker")); });
+    if (signOutButton) signOutButton.addEventListener("click", function () {
+      if (window.NEO_ACCOUNT_STORE) window.NEO_ACCOUNT_STORE.clearActive();
+      else {
+        try { localStorage.removeItem("ugp_token"); localStorage.removeItem("ugp_session"); } catch (error) {}
+      }
+      try { sessionStorage.removeItem(GUEST_SESSION_KEY); } catch (error) {}
+      window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: null } }));
+      window.dispatchEvent(new CustomEvent("neo-account-picker"));
+    });
+    app.querySelector("[data-chat-back]").addEventListener("click", function () {
+      app.classList.remove("is-conversation-open");
+      syncMobilePanes();
+      var selectedRoom = app.querySelector('[data-chat-room="' + escapeSelector(state.selected) + '"]');
+      if (selectedRoom) selectedRoom.focus({ preventScroll: true });
+    });
     if (profileDm) profileDm.addEventListener("click", function () { startDirectMessage(state.profileUser); });
     if (hostWindow) hostWindow.addEventListener("neo-chat-open-section", function (event) {
       app.classList.remove("is-conversation-open");
+      syncMobilePanes();
       if (event.detail && event.detail.section === "servers" && serverSection) serverSection.scrollIntoView({ block: "start" });
     });
     input.addEventListener("input", function () {
@@ -2881,15 +3169,26 @@
       syncComposerState();
     });
     input.addEventListener("keydown", function (event) {
+      if (event.isComposing) return;
       if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
     });
+    if (attachButton && attachmentInput) {
+      attachButton.addEventListener("click", function () { if (!attachButton.disabled) attachmentInput.click(); });
+      attachmentInput.addEventListener("change", function () { selectAttachment(attachmentInput.files && attachmentInput.files[0]); });
+    }
     form.addEventListener("submit", function (event) { event.preventDefault(); sendMessage(input.value); });
     function handleAuthChanged() { if (!state.destroyed) loadApp(); }
     function handleVisibilityChanged() {
       if (!document.hidden && !state.destroyed && state.session && state.session.id) loadRecent(true);
     }
+    function handleMessagesResize() { if (!state.destroyed) syncMobilePanes(); }
     window.addEventListener("neo-auth-changed", handleAuthChanged);
+    window.addEventListener("resize", handleMessagesResize, { passive: true });
     document.addEventListener("visibilitychange", handleVisibilityChanged);
+    if (window.ResizeObserver) {
+      messagesResizeObserver = new ResizeObserver(handleMessagesResize);
+      messagesResizeObserver.observe(app);
+    }
     if (hostWindow) hostWindow._neoMessagesCleanup = function () {
       state.destroyed = true;
       window.clearInterval(state.poll);
@@ -2899,9 +3198,123 @@
       if (state.searchController) state.searchController.abort();
       Object.values(state.sendRequests).forEach(function (controller) { controller.abort(); });
       window.removeEventListener("neo-auth-changed", handleAuthChanged);
+      window.removeEventListener("resize", handleMessagesResize);
       document.removeEventListener("visibilitychange", handleVisibilityChanged);
+      if (messagesResizeObserver) messagesResizeObserver.disconnect();
     };
     loadApp();
+  }
+
+  function mountGameTouchControls(body, frame) {
+    var controls = document.createElement("section");
+    controls.className = "mobile-game-controls";
+    controls.setAttribute("aria-label", "Touch game controls");
+    controls.innerHTML =
+      '<div class="mobile-game-dpad" aria-label="Direction controls">' +
+        '<button type="button" data-game-direction data-game-arrow="38" data-game-wasd="87" aria-label="Move up">&#8593;</button>' +
+        '<button type="button" data-game-direction data-game-arrow="37" data-game-wasd="65" aria-label="Move left">&#8592;</button>' +
+        '<button type="button" data-game-direction data-game-arrow="40" data-game-wasd="83" aria-label="Move down">&#8595;</button>' +
+        '<button type="button" data-game-direction data-game-arrow="39" data-game-wasd="68" aria-label="Move right">&#8594;</button>' +
+      '</div>' +
+      '<div class="mobile-game-actions" aria-label="Action controls">' +
+        '<button type="button" data-game-keys="32" aria-label="Primary action">A</button>' +
+        '<button type="button" data-game-keys="13" aria-label="Start or confirm">START</button>' +
+        '<button type="button" data-game-keys="27" aria-label="Pause or escape">ESC</button>' +
+      '</div>' +
+      '<button class="mobile-game-map-toggle" type="button" aria-label="Use WASD movement keys" aria-pressed="false">ARROWS</button>' +
+      '<button class="mobile-game-controls-toggle" type="button" aria-label="Hide touch controls" aria-pressed="true">CONTROLS</button>';
+    controls.dataset.moveMode = "arrow";
+
+    var keyNames = {
+      13: { key: "Enter", code: "Enter" },
+      27: { key: "Escape", code: "Escape" },
+      32: { key: " ", code: "Space" },
+      37: { key: "ArrowLeft", code: "ArrowLeft" },
+      38: { key: "ArrowUp", code: "ArrowUp" },
+      39: { key: "ArrowRight", code: "ArrowRight" },
+      40: { key: "ArrowDown", code: "ArrowDown" },
+      65: { key: "a", code: "KeyA" },
+      68: { key: "d", code: "KeyD" },
+      83: { key: "s", code: "KeyS" },
+      87: { key: "w", code: "KeyW" }
+    };
+
+    function dispatchGameKey(keyCode, pressed) {
+      try {
+        var frameWindow = frame.contentWindow;
+        var frameDocument = frame.contentDocument;
+        if (!frameWindow || !frameDocument) return;
+        var identity = keyNames[keyCode] || { key: "", code: "" };
+        var event = new frameWindow.KeyboardEvent(pressed ? "keydown" : "keyup", {
+          key: identity.key,
+          code: identity.code,
+          bubbles: true,
+          cancelable: true
+        });
+        try { Object.defineProperty(event, "keyCode", { configurable: true, value: keyCode }); } catch (error) {}
+        try { Object.defineProperty(event, "which", { configurable: true, value: keyCode }); } catch (error) {}
+        var target = frameDocument.activeElement && frameDocument.activeElement !== frameDocument.body
+          ? frameDocument.activeElement
+          : frameDocument;
+        target.dispatchEvent(event);
+      } catch (error) {
+        // A game can replace its document while loading; the next press will use the new document.
+      }
+    }
+
+    function buttonKeyCodes(button) {
+      if (button.hasAttribute("data-game-direction")) {
+        return [Number(controls.dataset.moveMode === "wasd" ? button.dataset.gameWasd : button.dataset.gameArrow)];
+      }
+      return String(button.dataset.gameKeys || "").split(",").map(Number).filter(Boolean);
+    }
+
+    function setPressed(button, pressed, keyCodes) {
+      (keyCodes || buttonKeyCodes(button)).forEach(function (value) {
+        var code = Number(value);
+        if (code) dispatchGameKey(code, pressed);
+      });
+      button.classList.toggle("is-pressed", pressed);
+    }
+
+    controls.addEventListener("pointerdown", function (event) {
+      var button = event.target.closest("[data-game-keys], [data-game-direction]");
+      if (!button || button.dataset.activePointer) return;
+      button.dataset.activePointer = String(event.pointerId);
+      button.dataset.activeKeyCodes = buttonKeyCodes(button).join(",");
+      try { button.setPointerCapture(event.pointerId); } catch (error) {}
+      setPressed(button, true, button.dataset.activeKeyCodes.split(",").map(Number));
+      event.preventDefault();
+      event.stopPropagation();
+    }, { passive: false });
+
+    function releaseGameButton(event) {
+      var button = event.target.closest && event.target.closest("[data-game-keys], [data-game-direction]");
+      if (!button || button.dataset.activePointer !== String(event.pointerId)) return;
+      var keyCodes = String(button.dataset.activeKeyCodes || "").split(",").map(Number).filter(Boolean);
+      delete button.dataset.activePointer;
+      delete button.dataset.activeKeyCodes;
+      setPressed(button, false, keyCodes);
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    controls.addEventListener("pointerup", releaseGameButton);
+    controls.addEventListener("pointercancel", releaseGameButton);
+    controls.addEventListener("lostpointercapture", releaseGameButton);
+    controls.addEventListener("contextmenu", function (event) { event.preventDefault(); });
+    controls.querySelector(".mobile-game-map-toggle").addEventListener("click", function (event) {
+      var useWasd = controls.dataset.moveMode !== "wasd";
+      controls.dataset.moveMode = useWasd ? "wasd" : "arrow";
+      event.currentTarget.textContent = useWasd ? "WASD" : "ARROWS";
+      event.currentTarget.setAttribute("aria-pressed", useWasd ? "true" : "false");
+      event.currentTarget.setAttribute("aria-label", useWasd ? "Use arrow movement keys" : "Use WASD movement keys");
+    });
+    controls.querySelector(".mobile-game-controls-toggle").addEventListener("click", function (event) {
+      var collapsed = controls.classList.toggle("is-collapsed");
+      event.currentTarget.setAttribute("aria-pressed", collapsed ? "false" : "true");
+      event.currentTarget.setAttribute("aria-label", collapsed ? "Show touch controls" : "Hide touch controls");
+    });
+    body.appendChild(controls);
   }
 
   function mountFrame(app, body) {
@@ -2948,6 +3361,7 @@
     frame.setAttribute("allowfullscreen", "");
     frame.dataset.route = app.route;
     body.append(loader, fallback, frame);
+    if (app.id.indexOf("zone-") === 0) mountGameTouchControls(body, frame);
 
     var timeout = 0;
     var hostWindow = body.closest(".neo-window");
@@ -3215,11 +3629,11 @@
     window.clearTimeout(win._neoResizeTimer);
     win.classList.add("is-closing");
     win.classList.remove("is-open", "is-active");
+    if (openWindows.get(id) === win) openWindows.delete(id);
+    try { renderDock(); } catch (error) {}
+    try { activateTopWindow(); } catch (error) {}
     window.setTimeout(function () {
       win.remove();
-      openWindows.delete(id);
-      try { renderDock(); } catch (error) {}
-      try { activateTopWindow(); } catch (error) {}
     }, 220);
   }
 
@@ -3450,12 +3864,14 @@
         return response.json();
       })
       .then(function (entries) {
-        catalog = Array.isArray(entries) ? entries.map(function (entry) {
+        catalog = Array.isArray(entries) ? entries.map(function (entry, index) {
           return {
             name: String(entry.name || entry.title || entry.slug || "Untitled game"),
             slug: String(entry.slug || ""),
             file: String(entry.file || ""),
-            searchName: normalizeText(entry.name || entry.title || entry.slug)
+            source: String(entry.source || "neo-local"),
+            searchName: normalizeText(entry.name || entry.title || entry.slug),
+            catalogIndex: index
           };
         }) : [];
         return catalog;
@@ -3552,17 +3968,185 @@
   }
 
   function wireLibraryApp(body) {
+    var home = body.querySelector("[data-library-home]");
+    var catalogView = body.querySelector("[data-library-catalog]");
+    var footer = body.querySelector("[data-library-footer]");
+    var homeForm = body.querySelector("[data-library-home-form]");
+    var homeInput = body.querySelector("[data-library-home-search]");
+    var browse = body.querySelector("[data-library-browse]");
+    var back = body.querySelector("[data-library-back]");
     var input = body.querySelector("[data-library-search]");
+    var sourceFilter = body.querySelector("[data-library-source]");
+    var sort = body.querySelector("[data-library-sort]");
     var grid = body.querySelector("[data-library-grid]");
     var state = body.querySelector("[data-library-state]");
     var count = body.querySelector("[data-library-count]");
     var visible = body.querySelector("[data-library-visible]");
     var more = body.querySelector("[data-library-more]");
+    var heading = body.querySelector("[data-library-heading]");
+    var gridTitle = body.querySelector("[data-library-grid-title]");
+    var favoriteCount = body.querySelector("[data-library-favorite-count]");
+    var spotlight = body.querySelector("[data-library-spotlight]");
+    var spotlightName = body.querySelector("[data-library-spotlight-name]");
+    var spotlightCover = body.querySelector("[data-library-spotlight-cover]");
+    var spotlightPlay = body.querySelector("[data-library-spotlight-play]");
+    var spotlightFavorite = body.querySelector("[data-library-spotlight-favorite]");
+    var spotlightPosition = body.querySelector("[data-library-spotlight-position]");
+    var spotlightPrevious = body.querySelector("[data-library-spotlight-prev]");
+    var spotlightNext = body.querySelector("[data-library-spotlight-next]");
+    var soundButton = body.querySelector("[data-library-sound]");
+    var settingsButton = body.querySelector("[data-library-settings]");
+    var settingsPanel = body.querySelector("[data-library-settings-panel]");
+    var compactToggle = body.querySelector("[data-library-compact]");
+    var reduceEffectsToggle = body.querySelector("[data-library-reduce-effects]");
+    var favoriteStorageKey = "neo_os_game_favorites_v1";
+    var settingsStorageKey = "neo_os_arcade_settings_v1";
     var pageSize = 48;
+    var allEntries = [];
     var matches = [];
     var rendered = 0;
     var filterTimer = 0;
-    if (!input || !grid || !state || !count || !visible || !more) return;
+    var viewMode = "catalog";
+    var spotlightEntries = [];
+    var spotlightIndex = 0;
+    var currentSpotlightEntry = null;
+    var favorites = readStoredFavorites();
+    var arcadeSettings = readArcadeSettings();
+    var soundMuted = arcadeSettings.soundMuted !== false;
+    if (!home || !catalogView || !input || !grid || !state || !count || !visible || !more) return;
+
+    function readStoredFavorites() {
+      try {
+        var stored = JSON.parse(localStorage.getItem(favoriteStorageKey) || "[]");
+        return new Set(Array.isArray(stored) ? stored.map(String).slice(0, 800) : []);
+      } catch (error) {
+        return new Set();
+      }
+    }
+
+    function saveFavorites() {
+      try { localStorage.setItem(favoriteStorageKey, JSON.stringify(Array.from(favorites))); } catch (error) {}
+    }
+
+    function readArcadeSettings() {
+      try {
+        var stored = JSON.parse(localStorage.getItem(settingsStorageKey) || "{}");
+        return stored && typeof stored === "object" ? stored : {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function saveArcadeSettings() {
+      try { localStorage.setItem(settingsStorageKey, JSON.stringify(arcadeSettings)); } catch (error) {}
+    }
+
+    function playLibraryFx(frequency) {
+      if (soundMuted || performanceActive()) return;
+      try {
+        var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        var context = new AudioContextClass();
+        var oscillator = context.createOscillator();
+        var gain = context.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.value = frequency || 420;
+        gain.gain.setValueAtTime(0.025, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.045);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.05);
+        oscillator.addEventListener("ended", function () { context.close(); }, { once: true });
+      } catch (error) {}
+    }
+
+    function syncSettings() {
+      body.classList.toggle("is-compact", Boolean(arcadeSettings.compact));
+      body.classList.toggle("is-reduced", Boolean(arcadeSettings.reduceEffects));
+      if (compactToggle) compactToggle.checked = Boolean(arcadeSettings.compact);
+      if (reduceEffectsToggle) reduceEffectsToggle.checked = Boolean(arcadeSettings.reduceEffects);
+      if (soundButton) {
+        soundButton.classList.toggle("is-muted", soundMuted);
+        soundButton.setAttribute("aria-pressed", soundMuted ? "true" : "false");
+        soundButton.setAttribute("aria-label", soundMuted ? "Enable interface sounds" : "Mute interface sounds");
+        soundButton.title = soundMuted ? "Enable interface sounds" : "Mute interface sounds";
+      }
+    }
+
+    function syncNavigation(active) {
+      body.querySelectorAll("[data-library-nav]").forEach(function (button) {
+        var selected = button.getAttribute("data-library-nav") === active;
+        button.classList.toggle("is-active", selected);
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+    }
+
+    function syncFavoriteCount() {
+      if (favoriteCount) favoriteCount.textContent = String(favorites.size);
+    }
+
+    function syncFavoriteButtons() {
+      body.querySelectorAll("[data-game-favorite]").forEach(function (button) {
+        var selected = favorites.has(button.getAttribute("data-game-favorite"));
+        button.classList.toggle("is-favorite", selected);
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+        button.setAttribute("aria-label", selected ? "Remove from favorites" : "Add to favorites");
+      });
+      if (spotlightFavorite && currentSpotlightEntry) {
+        var selected = favorites.has(currentSpotlightEntry.slug);
+        spotlightFavorite.classList.toggle("is-favorite", selected);
+        spotlightFavorite.setAttribute("aria-pressed", selected ? "true" : "false");
+        spotlightFavorite.setAttribute("aria-label", selected ? "Remove spotlight game from favorites" : "Add spotlight game to favorites");
+      }
+      syncFavoriteCount();
+    }
+
+    function toggleFavorite(entry) {
+      if (!entry || !entry.slug) return;
+      var adding = !favorites.has(entry.slug);
+      if (adding) favorites.add(entry.slug);
+      else favorites.delete(entry.slug);
+      saveFavorites();
+      playLibraryFx(adding ? 560 : 310);
+      syncFavoriteButtons();
+      showToast(adding ? "Added to favorites" : "Removed from favorites", displayGameName(entry.name), "info");
+      if (viewMode === "favorites") applyFilter(allEntries);
+    }
+
+    function closeSettings() {
+      if (!settingsPanel || !settingsButton) return;
+      settingsPanel.hidden = true;
+      settingsButton.setAttribute("aria-expanded", "false");
+    }
+
+    function showHome() {
+      if (homeInput) homeInput.value = "";
+      if (input) input.value = "";
+      if (sourceFilter) sourceFilter.value = "all";
+      showCatalog("catalog", "");
+      requestAnimationFrame(function () {
+        if (home) home.scrollIntoView({ block: "start" });
+      });
+    }
+
+    function showCatalog(mode, initialQuery) {
+      viewMode = mode === "favorites" ? "favorites" : "catalog";
+      home.hidden = viewMode === "favorites";
+      catalogView.hidden = false;
+      if (footer) footer.hidden = false;
+      if (heading) heading.textContent = viewMode === "favorites" ? "Favorite Games" : "Featured Games";
+      if (gridTitle) gridTitle.textContent = viewMode === "favorites" ? "Your Favorites" : "All Games";
+      if (spotlight) spotlight.hidden = viewMode === "favorites";
+      syncNavigation(viewMode === "favorites" ? "favorites" : "home");
+      if (typeof initialQuery === "string") input.value = initialQuery;
+      closeSettings();
+      if (allEntries.length) applyFilter(allEntries);
+      else setState("Loading your library", "Reading the local catalog.", true);
+      requestAnimationFrame(function () {
+        if (viewMode !== "favorites" && input.value) input.focus();
+      });
+    }
 
     function setState(title, copy, loading) {
       state.hidden = false;
@@ -3574,19 +4158,33 @@
     function renderNextPage() {
       var end = Math.min(rendered + pageSize, matches.length);
       var fragment = document.createDocumentFragment();
-      for (var i = rendered; i < end; i++) fragment.appendChild(createLibraryCard(matches[i]));
+      for (var i = rendered; i < end; i++) {
+        fragment.appendChild(createLibraryCard(matches[i], {
+          isFavorite: function (entry) { return favorites.has(entry.slug); },
+          toggleFavorite: toggleFavorite,
+          playFx: playLibraryFx
+        }));
+      }
       grid.appendChild(fragment);
       rendered = end;
-      visible.textContent = String(rendered);
+      visible.textContent = rendered.toLocaleString() + " SHOWN";
       more.hidden = rendered >= matches.length;
       state.hidden = matches.length > 0;
+      syncFavoriteButtons();
     }
 
     function applyFilter(entries) {
       var query = normalizeText(input.value);
       grid.textContent = "";
       rendered = 0;
-      matches = query ? entries.map(function (entry) {
+      var available = viewMode === "favorites" ? entries.filter(function (entry) {
+        return favorites.has(entry.slug);
+      }) : entries.slice();
+      var source = sourceFilter ? sourceFilter.value : "all";
+      if (source && source !== "all") {
+        available = available.filter(function (entry) { return entry.source === source; });
+      }
+      matches = query ? available.map(function (entry) {
         return { entry: entry, score: scoreEntry(entry, query) };
       }).filter(function (match) {
         return Number.isFinite(match.score);
@@ -3594,43 +4192,176 @@
         return a.score - b.score || a.entry.name.localeCompare(b.entry.name);
       }).map(function (match) {
         return match.entry;
-      }) : entries;
-      count.textContent = matches.length.toLocaleString() + " games";
+      }) : available;
+      if (!query) {
+        if (sort && sort.value === "za") matches.sort(function (a, b) { return b.name.localeCompare(a.name); });
+        else if (sort && sort.value === "az") matches.sort(function (a, b) { return a.name.localeCompare(b.name); });
+        else matches.sort(function (a, b) { return a.catalogIndex - b.catalogIndex; });
+      }
+      count.textContent = matches.length.toLocaleString() + " TITLES LOADED";
       if (!matches.length) {
-        visible.textContent = "0";
+        visible.textContent = "0 SHOWN";
         more.hidden = true;
-        setState("No HTML games found", "Try a shorter title or clear the search.", false);
+        setState(
+          viewMode === "favorites" && !query ? "No favorites yet" : "No local games found",
+          viewMode === "favorites" && !query ? "Use the heart on any game to save it here." : "Try a shorter title or clear the search.",
+          false
+        );
         return;
       }
       renderNextPage();
     }
 
+    function buildSpotlight(entries) {
+      var preferred = ["Minecraft", "Five Nights at Freddy's", "Doom 64", "Tetris", "All night nippon super mario bros"];
+      spotlightEntries = preferred.map(function (name) {
+        return entries.find(function (entry) { return entry.searchName === normalizeText(name); });
+      }).filter(Boolean);
+      if (!spotlightEntries.length) spotlightEntries = entries.slice(0, 6);
+      spotlightIndex = 0;
+      updateSpotlight();
+    }
+
+    function updateSpotlight() {
+      if (!spotlightEntries.length || !spotlightName || !spotlightCover) return;
+      currentSpotlightEntry = spotlightEntries[spotlightIndex];
+      spotlightName.textContent = displayGameName(currentSpotlightEntry.name);
+      if (spotlightPosition) spotlightPosition.textContent = (spotlightIndex + 1) + " / " + spotlightEntries.length;
+      if (spotlightPlay) spotlightPlay.disabled = false;
+      if (spotlightFavorite) spotlightFavorite.disabled = false;
+      spotlightCover.textContent = "";
+      var image = document.createElement("img");
+      image.alt = "";
+      image.decoding = "async";
+      image.width = 360;
+      image.height = 360;
+      var candidates = coverCandidates(currentSpotlightEntry.slug);
+      image.dataset.candidates = JSON.stringify(candidates);
+      image.dataset.candidateIndex = "0";
+      image.dataset.fallbackClass = "arcade-spotlight-fallback";
+      image.src = candidates[0];
+      image.addEventListener("error", advanceCoverCandidate);
+      spotlightCover.appendChild(image);
+      syncFavoriteButtons();
+    }
+
     Promise.all([loadCatalog(), loadCoverManifest()]).then(function (results) {
-      var entries = results[0];
-      applyFilter(entries);
-      input.addEventListener("input", function () {
-        window.clearTimeout(filterTimer);
-        filterTimer = window.setTimeout(function () { applyFilter(entries); }, 80);
-      });
-      more.addEventListener("click", renderNextPage);
+      allEntries = results[0];
+      buildSpotlight(allEntries);
+      applyFilter(allEntries);
     }).catch(function () {
       count.textContent = "Unavailable";
-      visible.textContent = "0";
+      visible.textContent = "0 SHOWN";
       more.hidden = true;
-      setState("HTML Games unavailable", "The local game catalog could not be read. Try reopening HTML Games.", false);
+      setState("Games unavailable", "The local game catalog could not be read. Try reopening Games.", false);
     });
+
+    input.addEventListener("input", function () {
+      window.clearTimeout(filterTimer);
+      filterTimer = window.setTimeout(function () {
+        if (allEntries.length) applyFilter(allEntries);
+      }, 70);
+    });
+    if (sort) sort.addEventListener("change", function () {
+      if (allEntries.length) applyFilter(allEntries);
+    });
+    if (sourceFilter) sourceFilter.addEventListener("change", function () {
+      if (allEntries.length) applyFilter(allEntries);
+    });
+    more.addEventListener("click", function () { playLibraryFx(440); renderNextPage(); });
+    if (browse) browse.addEventListener("click", function () { playLibraryFx(460); showCatalog("catalog", ""); });
+    if (back) back.addEventListener("click", function () { playLibraryFx(330); showHome(); });
+    if (homeForm) homeForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      showCatalog("catalog", homeInput ? homeInput.value : "");
+      requestAnimationFrame(function () {
+        if (input) input.scrollIntoView({ block: "center" });
+      });
+    });
+    if (homeInput) homeInput.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      showCatalog("catalog", homeInput.value);
+    });
+    body.querySelectorAll("[data-library-nav]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var destination = button.getAttribute("data-library-nav");
+        playLibraryFx(420);
+        if (destination === "favorites") showCatalog("favorites", "");
+        else showHome();
+      });
+    });
+    if (spotlightPlay) spotlightPlay.addEventListener("click", function () {
+      if (!currentSpotlightEntry) return;
+      playLibraryFx(520);
+      openZone(currentSpotlightEntry);
+    });
+    if (spotlightFavorite) spotlightFavorite.addEventListener("click", function () {
+      toggleFavorite(currentSpotlightEntry);
+    });
+    if (spotlightPrevious) spotlightPrevious.addEventListener("click", function () {
+      if (!spotlightEntries.length) return;
+      spotlightIndex = (spotlightIndex - 1 + spotlightEntries.length) % spotlightEntries.length;
+      playLibraryFx(360);
+      updateSpotlight();
+    });
+    if (spotlightNext) spotlightNext.addEventListener("click", function () {
+      if (!spotlightEntries.length) return;
+      spotlightIndex = (spotlightIndex + 1) % spotlightEntries.length;
+      playLibraryFx(420);
+      updateSpotlight();
+    });
+    if (soundButton) soundButton.addEventListener("click", function () {
+      soundMuted = !soundMuted;
+      arcadeSettings.soundMuted = soundMuted;
+      saveArcadeSettings();
+      syncSettings();
+      if (!soundMuted) playLibraryFx(610);
+      showToast(soundMuted ? "Game sounds muted" : "Game sounds on", "This only changes NEO Games interface sounds.", "info");
+    });
+    if (settingsButton && settingsPanel) settingsButton.addEventListener("click", function (event) {
+      event.stopPropagation();
+      var opening = settingsPanel.hidden;
+      settingsPanel.hidden = !opening;
+      settingsButton.setAttribute("aria-expanded", opening ? "true" : "false");
+    });
+    if (compactToggle) compactToggle.addEventListener("change", function () {
+      arcadeSettings.compact = compactToggle.checked;
+      pageSize = compactToggle.checked ? 60 : 48;
+      saveArcadeSettings();
+      syncSettings();
+      if (allEntries.length) applyFilter(allEntries);
+    });
+    if (reduceEffectsToggle) reduceEffectsToggle.addEventListener("change", function () {
+      arcadeSettings.reduceEffects = reduceEffectsToggle.checked;
+      saveArcadeSettings();
+      syncSettings();
+    });
+    body.addEventListener("click", function (event) {
+      if (settingsPanel && !settingsPanel.hidden && !event.target.closest("[data-library-settings-panel]") && !event.target.closest("[data-library-settings]")) closeSettings();
+    });
+    body.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && settingsPanel && !settingsPanel.hidden) closeSettings();
+    });
+    pageSize = arcadeSettings.compact ? 60 : 48;
+    syncSettings();
+    syncFavoriteCount();
+    showCatalog("catalog", "");
   }
 
   function displayGameName(value) {
     return String(value || "");
   }
 
-  function createLibraryCard(entry) {
+  function createLibraryCard(entry, options) {
+    options = options || {};
     var displayName = displayGameName(entry.name);
-    var button = document.createElement("button");
-    button.className = "library-card";
-    button.type = "button";
-    button.setAttribute("aria-label", "Open " + displayName);
+    var card = document.createElement("article");
+    card.className = "library-card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", "Open " + displayName);
+    card.dataset.gameSlug = entry.slug;
     var cover = document.createElement("span");
     cover.className = "library-cover";
     var image = document.createElement("img");
@@ -3646,19 +4377,41 @@
     image.src = candidates[0];
     image.addEventListener("error", advanceCoverCandidate);
     cover.appendChild(image);
+    var source = document.createElement("span");
+    source.className = "library-source-badge";
+    source.textContent = entry.source === "gn-math" ? "GN" : entry.source === "staticquasar" ? "QUASAR" : "NEO";
+    var favorite = document.createElement("button");
+    favorite.className = "library-favorite";
+    favorite.type = "button";
+    favorite.dataset.gameFavorite = entry.slug;
+    favorite.setAttribute("aria-pressed", options.isFavorite && options.isFavorite(entry) ? "true" : "false");
+    favorite.setAttribute("aria-label", options.isFavorite && options.isFavorite(entry) ? "Remove from favorites" : "Add to favorites");
+    favorite.innerHTML = iconMarkup("heart");
+    favorite.addEventListener("click", function (event) {
+      event.stopPropagation();
+      if (options.toggleFavorite) options.toggleFavorite(entry);
+    });
+    cover.append(source, favorite);
     var copy = document.createElement("span");
     copy.className = "library-card-copy";
     var title = document.createElement("strong");
     title.textContent = displayName;
     var meta = document.createElement("small");
-    meta.textContent = "HTML game";
+    meta.textContent = entry.source === "gn-math" ? "GN COLLECTION" : entry.source === "staticquasar" ? "QUASAR COLLECTION" : "NEO CLASSICS";
     copy.append(title, meta);
-    var arrow = document.createElement("span");
-    arrow.className = "library-card-arrow";
-    arrow.innerHTML = iconMarkup("chevron");
-    button.append(cover, copy, arrow);
-    button.addEventListener("click", function () { openZone(entry); });
-    return button;
+    card.append(cover, copy);
+    function openCard(event) {
+      if (event && event.target.closest(".library-favorite")) return;
+      if (options.playFx) options.playFx(510);
+      openZone(entry);
+    }
+    card.addEventListener("click", openCard);
+    card.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openCard(event);
+    });
+    return card;
   }
 
   function renderSearchResults(container, state, count, matches, query) {
@@ -3758,9 +4511,11 @@
         route: route,
         width: 1240,
         height: 790,
-        launcher: false
+        launcher: false,
+        category: "Games"
       };
     }
+    apps[id].category = "Games";
     openApp(id);
   }
 
@@ -4653,7 +5408,7 @@
     var isActive = Boolean(state && state.id === selected);
     var isBundled = Boolean(record && wallpaperEngine && wallpaperEngine.isBundled && wallpaperEngine.isBundled(selected));
     var isPreview = Boolean(record && record.previewFallback);
-    var isCanvas = selected === "signal" || isPreview;
+    var isCanvas = selected === "signal" || selected === "neo-reactive" || isPreview;
     var isVideo = Boolean(record && (record.type === "video" || record.type === "youtube"));
     var isWeb = Boolean(record && record.type === "web");
     var isAnimatedImage = Boolean(record && record.type === "animated-image");
@@ -4911,22 +5666,83 @@
     });
   }
 
+  function initStartScreen(onComplete) {
+    var screen = document.getElementById("neo-start-screen");
+    var desktop = document.getElementById("neo-desktop");
+    if (!screen) {
+      onComplete();
+      return;
+    }
+
+    if (desktop) {
+      desktop.inert = true;
+      desktop.setAttribute("aria-hidden", "true");
+    }
+
+    function finish(mode) {
+      root.dataset.startMode = mode;
+      try { localStorage.setItem("neo_start_mode_v1", mode); } catch (error) {}
+      screen.hidden = true;
+      screen.setAttribute("aria-hidden", "true");
+      if (desktop) {
+        desktop.inert = false;
+        desktop.removeAttribute("aria-hidden");
+      }
+      onComplete();
+    }
+
+    screen.querySelectorAll("[data-start-mode]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        finish(button.getAttribute("data-start-mode") === "mobile" ? "mobile" : "laptop");
+      });
+    });
+
+    var fullscreen = screen.querySelector("[data-start-fullscreen]");
+    if (fullscreen) fullscreen.addEventListener("click", function () {
+      var target = document.documentElement;
+      var request = target.requestFullscreen || target.webkitRequestFullscreen;
+      if (request) Promise.resolve(request.call(target)).catch(function () {});
+    });
+
+    var blank = screen.querySelector("[data-start-blank]");
+    if (blank) blank.addEventListener("click", function () {
+      var popup = window.open("about:blank", "_blank");
+      if (!popup) {
+        showToast("Pop-up blocked", "Allow pop-ups to launch NEO OS in a blank tab.", "info");
+        return;
+      }
+      try {
+        popup.document.title = "NEO OS";
+        popup.document.body.style.margin = "0";
+        popup.document.body.style.background = "#000";
+        var frame = popup.document.createElement("iframe");
+        frame.src = window.location.href;
+        frame.title = "NEO OS";
+        frame.allow = "autoplay; fullscreen; clipboard-read; clipboard-write";
+        frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;background:#000";
+        popup.document.body.appendChild(frame);
+      } catch (error) {
+        popup.location.href = window.location.href;
+      }
+    });
+
+    requestAnimationFrame(function () {
+      var preferred = screen.querySelector('[data-start-mode="' + (window.matchMedia("(max-width: 700px)").matches ? "mobile" : "laptop") + '"]');
+      if (preferred) preferred.focus({ preventScroll: true });
+    });
+  }
+
   function initAccountGate() {
     var gate = document.getElementById("neo-login-gate");
     var mount = gate && gate.querySelector("[data-neo-login-auth]");
     var guest = gate && gate.querySelector("[data-neo-login-guest]");
     var clock = gate && gate.querySelector("[data-neo-login-clock]");
     var date = gate && gate.querySelector("[data-neo-login-date]");
+    var desktop = document.getElementById("neo-desktop");
     if (!gate || !mount || !guest) return;
 
-    var hasSession = false;
-    try {
-      var token = localStorage.getItem("ugp_token") || "";
-      var user = JSON.parse(localStorage.getItem("ugp_session") || "null");
-      hasSession = Boolean(token && user && user.username);
-      if (!hasSession && localStorage.getItem(GUEST_SESSION_KEY) === "1") return;
-    } catch (error) {}
-    if (hasSession) return;
+    var resumeController = null;
+    var gateVersion = 0;
 
     function updateGateTime() {
       var now = new Date();
@@ -4935,37 +5751,172 @@
     }
 
     function dismissGate() {
+      gateVersion += 1;
+      if (resumeController) resumeController.abort();
+      resumeController = null;
+      if (typeof gate._neoAuthCleanup === "function") gate._neoAuthCleanup();
+      gate._neoAuthCleanup = null;
       gate.hidden = true;
       gate.setAttribute("aria-hidden", "true");
       window.clearInterval(gate._neoClockTimer);
-      document.getElementById("neo-desktop").focus({ preventScroll: true });
+      document.removeEventListener("keydown", trapGateFocus);
+      if (desktop) {
+        desktop.inert = false;
+        desktop.removeAttribute("aria-hidden");
+        desktop.focus({ preventScroll: true });
+      }
     }
 
-    gate.hidden = false;
-    gate.removeAttribute("aria-hidden");
-    updateGateTime();
-    gate._neoClockTimer = window.setInterval(updateGateTime, 1000);
-    guest.addEventListener("click", function () {
-      try { localStorage.setItem(GUEST_SESSION_KEY, "1"); } catch (error) {}
-      dismissGate();
-      showToast("Chat skipped", "Choose a name later from the account button.", "check");
-    }, { once: true });
+    function trapGateFocus(event) {
+      if (event.key !== "Tab" || gate.hidden) return;
+      var focusable = Array.from(gate.querySelectorAll('button:not([hidden]):not([disabled]), input:not([hidden]):not([disabled]), [tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) return;
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (!gate.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
 
-    import("./neo-account-signin.js?v=5").then(function (runtime) {
-      if (gate.hidden) return;
-      gate._neoAuthCleanup = runtime.mountAccountSignIn(mount, function () {}, function (payload) {
-        try { localStorage.removeItem(GUEST_SESSION_KEY); } catch (error) {}
-        window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: payload.user } }));
-        dismissGate();
-        showToast("Chat ready", "You are now " + payload.user.username + ".", "check");
-      }, {
-        title: "Choose your name",
-        copy: "This is how you will appear in Global Chat.",
-        success: "Name saved. Opening your workspace..."
+    function showGateShell() {
+      gate.hidden = false;
+      gate.removeAttribute("aria-hidden");
+      if (desktop) {
+        desktop.inert = true;
+        desktop.setAttribute("aria-hidden", "true");
+      }
+      updateGateTime();
+      window.clearInterval(gate._neoClockTimer);
+      gate._neoClockTimer = window.setInterval(updateGateTime, 1000);
+      document.removeEventListener("keydown", trapGateFocus);
+      document.addEventListener("keydown", trapGateFocus);
+      requestAnimationFrame(function () { if (!gate.hidden) gate.focus({ preventScroll: true }); });
+    }
+
+    function mountPicker(message) {
+      var version = ++gateVersion;
+      if (resumeController) resumeController.abort();
+      resumeController = null;
+      if (typeof gate._neoAuthCleanup === "function") gate._neoAuthCleanup();
+      gate._neoAuthCleanup = null;
+      showGateShell();
+      mount.innerHTML = '<div class="neo-login-load-error" role="status"><strong>Loading profiles</strong><p>Preparing your NEO account choices...</p></div>';
+      import("./neo-account-signin.js?v=20260901-production-auth-v1").then(function (runtime) {
+        if (gate.hidden || version !== gateVersion) return;
+        gate._neoAuthCleanup = runtime.mountAccountSignIn(mount, function () {}, function (payload) {
+          try { sessionStorage.removeItem(GUEST_SESSION_KEY); } catch (error) {}
+          window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: payload.user } }));
+          dismissGate();
+          showToast("Profile ready", "Welcome, " + payload.user.username + ".", "check");
+        }, {
+          title: "Sign in to NEO",
+          copy: "Continue with a saved account or sign in with your username and password.",
+          success: "Account ready. Opening your workspace..."
+        });
+        if (message) {
+          var feedback = mount.querySelector("[data-neo-sign-in-feedback]");
+          if (feedback) {
+            feedback.textContent = message;
+            feedback.classList.add("is-error");
+          }
+        }
+      }).catch(function () {
+        if (version !== gateVersion) return;
+        mount.innerHTML = '<div class="neo-login-load-error" role="alert"><strong>Account setup unavailable</strong><p>Continue as guest, then try again from NEO Chat.</p></div>';
+        guest.focus({ preventScroll: true });
       });
-    }).catch(function () {
-      mount.innerHTML = '<div class="neo-login-load-error" role="alert"><strong>Name service unavailable</strong><p>Continue without chat, then try again from the account button.</p></div>';
+    }
+
+    function resumeProfile(entry, startup) {
+      var token = String(entry && entry.token || "");
+      if (!token || !window.NEO_CHAT_TRANSPORT) {
+        mountPicker("Choose a profile to continue.");
+        return;
+      }
+      var version = ++gateVersion;
+      showGateShell();
+      if (typeof gate._neoAuthCleanup === "function") gate._neoAuthCleanup();
+      gate._neoAuthCleanup = null;
+      mount.innerHTML = '<div class="neo-login-load-error" role="status"><strong>Opening your profile</strong><p>Connecting securely to NEO Chat...</p></div>';
+      resumeController = new AbortController();
+      var activeController = resumeController;
+      var resumeTimer = window.setTimeout(function () { activeController.abort(); }, 12000);
+      window.NEO_CHAT_TRANSPORT.resume(token, activeController.signal).then(function (payload) {
+        if (gate.hidden || version !== gateVersion) return;
+        var resumed = payload && payload.user;
+        if (!resumed || !resumed.id || !resumed.username) throw new Error("Profile response incomplete.");
+        var session = Object.assign({}, resumed, { transport: payload.transport || window.NEO_CHAT_TRANSPORT.mode() });
+        if (window.NEO_ACCOUNT_STORE) window.NEO_ACCOUNT_STORE.save(token, session, session.transport);
+        else {
+          localStorage.setItem("ugp_token", token);
+          localStorage.setItem("ugp_session", JSON.stringify(session));
+        }
+        try { sessionStorage.removeItem(GUEST_SESSION_KEY); } catch (error) {}
+        window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: session } }));
+        dismissGate();
+        if (!startup) showToast("Profile ready", "Welcome, " + session.username + ".", "check");
+      }).catch(function (error) {
+        if (version !== gateVersion) return;
+        var expired = error && (error.status === 401 || error.status === 403);
+        if (expired) {
+          if (window.NEO_ACCOUNT_STORE) window.NEO_ACCOUNT_STORE.forget(token);
+          else {
+            try { localStorage.removeItem("ugp_token"); localStorage.removeItem("ugp_session"); } catch (storageError) {}
+          }
+        }
+        var message = expired
+          ? "That saved profile expired. Create another profile to continue."
+          : "The relay is taking longer than usual. Your saved profile was kept—try it again.";
+        mountPicker(message);
+      }).finally(function () {
+        window.clearTimeout(resumeTimer);
+        if (resumeController === activeController) resumeController = null;
+      });
+    }
+
+    guest.addEventListener("click", function () {
+      try { sessionStorage.setItem(GUEST_SESSION_KEY, "1"); } catch (error) {}
+      dismissGate();
+      showToast("Guest mode", "Create a profile later from NEO Chat.", "check");
     });
+
+    window.addEventListener("neo-account-picker", function () {
+      if (window.NEO_ACCOUNT_STORE) window.NEO_ACCOUNT_STORE.clearActive();
+      else {
+        try { localStorage.removeItem("ugp_token"); localStorage.removeItem("ugp_session"); } catch (error) {}
+      }
+      try { sessionStorage.removeItem(GUEST_SESSION_KEY); } catch (error) {}
+      mountPicker();
+    });
+
+    window.addEventListener("storage", function (event) {
+      if (["ugp_token", "ugp_session", "neo_chat_saved_accounts_v1"].indexOf(String(event.key || "")) === -1) return;
+      var session = nativeChatSession();
+      window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: session.id ? session : null } }));
+      if (!session.id) mountPicker("Your active profile changed in another tab.");
+    });
+
+    var active = window.NEO_ACCOUNT_STORE ? window.NEO_ACCOUNT_STORE.active() : null;
+    var legacyToken = "";
+    if (!active) {
+      try { legacyToken = localStorage.getItem("ugp_token") || ""; } catch (error) {}
+      if (legacyToken) active = { token: legacyToken, user: null };
+    }
+    var guestActive = false;
+    try { guestActive = !active && sessionStorage.getItem(GUEST_SESSION_KEY) === "1"; } catch (error) {}
+    if (guestActive) return;
+    if (active && active.token) {
+      resumeProfile(active, true);
+      return;
+    }
+    mountPicker();
   }
 
   function restartShell() {
@@ -5086,7 +6037,7 @@
       if (accountButton) {
         event.preventDefault();
         if (nativeChatSession().id) openApp("chat");
-        else openBrowserPage("sign-in", "Choose a name");
+        else window.dispatchEvent(new CustomEvent("neo-account-picker"));
         return;
       }
       var chatSection = event.target.closest("[data-open-chat-section]");
@@ -5146,14 +6097,27 @@
         }
         return;
       }
-      var taskbarMaterial = event.target.closest("[data-taskbar-material]");
-      if (taskbarMaterial) {
-        var material = taskbarMaterial.getAttribute("data-taskbar-material");
-        var preset = { clear: [0, 0], transparent: [28, 0], blur: [55, 18], acrylic: [78, 28], opaque: [100, 0] }[material];
-        settings.taskbarMaterial = material;
-        settings.taskbarOpacity = preset[0];
-        settings.taskbarBlur = preset[1];
-        applySettings();
+      var taskbarPosition = event.target.closest("[data-taskbar-position-option]");
+      if (taskbarPosition) {
+        var position = normalizeTaskbarPosition(taskbarPosition.getAttribute("data-taskbar-position-option"));
+        if (position !== settings.taskbarPosition) {
+          setSetting("taskbarPosition", position);
+          showToast("Taskbar moved", "The taskbar is now on the " + position + " edge.", "apps");
+        }
+        return;
+      }
+      var taskbarStyle = event.target.closest("[data-taskbar-style-option]");
+      if (taskbarStyle) {
+        var style = normalizeTaskbarStyle(taskbarStyle.getAttribute("data-taskbar-style-option"));
+        if (style !== settings.taskbarStyle) {
+          setSetting("taskbarStyle", style);
+          showToast("Taskbar style changed", style === "current" ? "The default floating glass style is active." : style === "transparent" ? "Only the taskbar icons remain visible." : "The taskbar now fills the selected edge.", "settings");
+        }
+        return;
+      }
+      var taskbarTint = event.target.closest("[data-taskbar-tint-preset]");
+      if (taskbarTint) {
+        setSetting("taskbarTint", taskbarTint.getAttribute("data-taskbar-tint-preset"));
         return;
       }
       var wallpaper = event.target.closest("[data-wallpaper-option]");
@@ -5229,7 +6193,7 @@
         return;
       }
       if (event.key === "Escape" && window.NEO_FEATURES && !event.target.closest("#desktop-context-menu")) window.NEO_FEATURES.closeOverlays();
-      if ((event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) && !event.target.closest("input, textarea, select, iframe")) {
+      if (!event.defaultPrevented && (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) && !event.target.closest("input, textarea, select, iframe")) {
         event.preventDefault();
         var anchor = document.activeElement && document.activeElement.getBoundingClientRect ? document.activeElement.getBoundingClientRect() : null;
         var menuX = anchor && anchor.width ? anchor.left + Math.min(anchor.width, 24) : window.innerWidth / 2;
@@ -5329,7 +6293,6 @@
   }
 
   function init() {
-    removeLegacyMessagesUi();
     shellApi = {
       openApp: openApp,
       openWallpaperSource: openWallpaperSource,
@@ -5387,6 +6350,7 @@
     bindGlobalEvents();
     window.addEventListener("neo-auth-changed", updateTopbarAccount);
     initCustomWallpaper();
+    initStartScreen(initAccountGate);
     performBoot();
     scheduleBrowsePrewarm();
   }

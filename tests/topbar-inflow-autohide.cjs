@@ -12,9 +12,9 @@ const fullBrowser = read("neo-os", "NEO-BROWSER", "index.html");
 const fullBrowserStyles = read("neo-os", "NEO-BROWSER", "assets", "neo-autohide.css");
 const fullBrowserRuntime = read("neo-os", "NEO-BROWSER", "assets", "neo.js");
 
-assert.match(index, /neo-topbar-autohide\.css\?v=20260831-inflow-bars-v1/);
-assert.match(index, /neo-topbar-autohide\.js\?v=20260831-inflow-bars-v1/);
-assert.match(shell, /route:\s*"\.\/NEO-BROWSER\/index\.html\?v=20260831-inflow-autohide-v1"/);
+assert.match(index, /neo-topbar-autohide\.css\?v=20260901-single-hover-bar-v1/);
+assert.match(index, /neo-topbar-autohide\.js\?v=20260901-single-hover-bar-v1/);
+assert.match(shell, /route:\s*"\.\/NEO-BROWSER\/index\.html\?v=20260901-single-hover-bar-v1"/);
 
 assert.match(bars, /grid-template-rows:\s*0 minmax\(0, 1fr\)/);
 assert.match(bars, /\.neo-window\.is-chrome-revealed[\s\S]*grid-template-rows:\s*var\(--neo-window-chrome-height\)/);
@@ -25,10 +25,13 @@ assert.match(barRuntime, /root\.classList\.add\("neo-auto-hide-bars"\)/);
 assert.doesNotMatch(barRuntime, /function performanceActive/);
 assert.match(barRuntime, /document\.addEventListener\("pointerout"[\s\S]*chrome\.contains\(next\)[\s\S]*hideWindowSoon/);
 assert.match(barRuntime, /lockedWindow = null;[\s\S]*activeWindow\.classList\.remove\("is-chrome-revealed"\)/);
+assert.match(barRuntime, /type:\s*"neo-shell:window-chrome"/);
+assert.match(barRuntime, /notifyEmbeddedChrome\(win, true\)/);
+assert.match(barRuntime, /notifyEmbeddedChrome\(win, false\)/);
 
 assert.match(fullBrowser, /id="browserChromeEdge"/);
 assert.match(fullBrowser, /id="browserChrome"/);
-assert.match(fullBrowser, /neo-autohide\.css\?v=20260831-inflow-autohide-v1/);
+assert.match(fullBrowser, /neo-autohide\.css\?v=20260901-single-hover-bar-v1/);
 assert.match(fullBrowserStyles, /\.browser-chrome \{[\s\S]*grid-template-rows:\s*1fr/);
 assert.match(fullBrowserStyles, /\.is-browser-chrome-autohide \.browser-chrome \{[\s\S]*grid-template-rows:\s*0fr/);
 assert.match(fullBrowserStyles, /\.is-browser-chrome-revealed \.browser-chrome[\s\S]*grid-template-rows:\s*1fr/);
@@ -37,5 +40,8 @@ assert.match(fullBrowserRuntime, /function initBrowserChromeAutohide\(\)/);
 assert.match(fullBrowserRuntime, /app\.classList\.add\('is-browser-chrome-autohide'\)/);
 assert.match(fullBrowserRuntime, /edge\.addEventListener\('pointerenter', reveal\)/);
 assert.match(fullBrowserRuntime, /#extPanel\.open,#extPopupWrap\.open/);
+assert.match(fullBrowserRuntime, /event\.data\?\.type !== 'neo-shell:window-chrome'/);
+assert.match(fullBrowserRuntime, /is-shell-window-chrome-visible/);
+assert.match(fullBrowserStyles, /is-shell-window-chrome-visible \.browser-chrome[\s\S]*grid-template-rows:\s*0fr !important/);
 
 console.log("In-flow auto-hide bar checks passed.");

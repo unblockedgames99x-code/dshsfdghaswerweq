@@ -54,6 +54,18 @@
     windowHideTimer = 0;
   }
 
+  function notifyEmbeddedChrome(win, visible) {
+    if (!win) return;
+    win.querySelectorAll("iframe").forEach(function (frame) {
+      try {
+        frame.contentWindow.postMessage({
+          type: "neo-shell:window-chrome",
+          visible: visible === true
+        }, "*");
+      } catch (error) {}
+    });
+  }
+
   function revealWindow(win) {
     if (!isVisibleWindow(win)) return;
     clearWindowHide();
@@ -62,6 +74,7 @@
     }
     activeWindow = win;
     win.classList.add("is-chrome-revealed");
+    notifyEmbeddedChrome(win, true);
   }
 
   function hideWindowSoon(win) {
@@ -75,6 +88,7 @@
         (chrome && (chrome.matches(":hover") || chrome.contains(document.activeElement)))
       ) return;
       win.classList.remove("is-chrome-revealed");
+      notifyEmbeddedChrome(win, false);
       if (activeWindow === win) activeWindow = null;
     }, hideDelay);
   }
@@ -164,6 +178,7 @@
     lockedWindow = null;
     if (statusBar) statusBar.classList.remove("is-edge-revealed");
     if (activeWindow) activeWindow.classList.remove("is-chrome-revealed");
+    if (activeWindow) notifyEmbeddedChrome(activeWindow, false);
     activeWindow = null;
   });
 

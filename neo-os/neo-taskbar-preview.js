@@ -281,7 +281,16 @@
     var tray = document.createElement("section");
     tray.className = "neo-minimized-tray";
     tray.hidden = true;
+    tray.tabIndex = 0;
     tray.setAttribute("aria-label", "Minimized windows");
+    tray.addEventListener("wheel", function (event) {
+      if (tray.scrollWidth <= tray.clientWidth || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      var maxScroll = tray.scrollWidth - tray.clientWidth;
+      var nextScroll = Math.max(0, Math.min(maxScroll, tray.scrollLeft + event.deltaY));
+      if (nextScroll === tray.scrollLeft) return;
+      tray.scrollLeft = nextScroll;
+      event.preventDefault();
+    }, { passive: false });
     document.body.appendChild(tray);
     return tray;
   }
@@ -293,18 +302,27 @@
     var height = preview.offsetHeight;
     var taskbar = button.closest(".taskbar");
     var taskbarRect = taskbar ? taskbar.getBoundingClientRect() : null;
-    if (taskbarRect && taskbarRect.height > taskbarRect.width * 2) {
-      var top = rect.top + rect.height / 2 - height / 2;
-      preview.style.left = Math.round(Math.min(window.innerWidth - width - 10, rect.right + 12)) + "px";
-      preview.style.top = Math.round(Math.max(10, Math.min(top, window.innerHeight - height - 10))) + "px";
-      preview.style.bottom = "auto";
-      return;
-    }
+    var position = document.documentElement.dataset.taskbarPosition || "left";
+    var gap = 12;
     var left = rect.left + rect.width / 2 - width / 2;
+    var top = rect.top + rect.height / 2 - height / 2;
+
+    if (position === "left") {
+      left = (taskbarRect ? taskbarRect.right : rect.right) + gap;
+    } else if (position === "right") {
+      left = (taskbarRect ? taskbarRect.left : rect.left) - width - gap;
+    } else if (position === "top") {
+      top = (taskbarRect ? taskbarRect.bottom : rect.bottom) + gap;
+    } else {
+      top = (taskbarRect ? taskbarRect.top : rect.top) - height - gap;
+    }
+
     left = Math.max(10, Math.min(left, window.innerWidth - width - 10));
+    top = Math.max(10, Math.min(top, window.innerHeight - height - 10));
     preview.style.left = Math.round(left) + "px";
-    preview.style.top = "auto";
-    preview.style.bottom = Math.round(window.innerHeight - rect.top + 10) + "px";
+    preview.style.right = "auto";
+    preview.style.top = Math.round(top) + "px";
+    preview.style.bottom = "auto";
   }
 
   function hideNow() {
@@ -471,6 +489,10 @@
     window.addEventListener("neo-performance-mode-change", function () {
       hideNow();
       refreshMinimizedTray();
+    });
+    window.addEventListener("neo-taskbar-layout-change", function () {
+      hideNow();
+      requestAnimationFrame(refreshMinimizedTray);
     });
     refreshMinimizedTray();
   }

@@ -1,12 +1,12 @@
 (() => {
   "use strict";
 
-  const ENGINE_VERSION = "neo-browse-v67";
+  const ENGINE_VERSION = "neo-browse-v68";
   const OS_SCOPE = "/neo-os/";
-  const ROUTE_PREFIX = "/neo-os/browse-v67/";
+  const ROUTE_PREFIX = "/neo-os/browse-v68/";
   const RUNTIME_ROOT = "/neo-os/browser-runtime";
   const NEW_TAB_DESTINATION = "neo://newtab";
-  const NEW_TAB_PAGE = "/neo-os/browser-newtab.html?v=neo-browse-v67";
+  const NEW_TAB_PAGE = "/neo-os/browser-newtab.html?v=neo-browse-v68";
   const WORKER_URL = `/neo-os/browser-sw.js?engine=${ENGINE_VERSION}`;
   const BAREMUX_WORKER_URL = `${RUNTIME_ROOT}/baremux/worker.js?engine=${ENGINE_VERSION}`;
   const PRIMARY_TRANSPORT_URL = `${RUNTIME_ROOT}/epoxy/index.mjs?engine=${ENGINE_VERSION}`;
@@ -371,6 +371,15 @@
     }
   }
 
+  function isYouTubeDestination(destination) {
+    try {
+      const hostname = new URL(destination).hostname.replace(/^www\./, "").toLowerCase();
+      return hostname === "youtube.com" || hostname === "youtu.be" || hostname === "youtube-nocookie.com";
+    } catch (error) {
+      return false;
+    }
+  }
+
   function switchToPrimaryTransport() {
     if (activeTransportUrl === PRIMARY_TRANSPORT_URL) {
       return Promise.resolve(PRIMARY_TRANSPORT_URL);
@@ -418,6 +427,9 @@
     const currentTransport = await ensureTransport();
     if (isMusicDestination(destination) && currentTransport === PRIMARY_TRANSPORT_URL) {
       return switchToFallbackTransport().catch(() => currentTransport);
+    }
+    if (isYouTubeDestination(destination) && currentTransport !== PRIMARY_TRANSPORT_URL) {
+      return switchToPrimaryTransport().catch(() => currentTransport);
     }
     return currentTransport;
   }
@@ -1496,7 +1508,7 @@
       } catch (error) {
         return false;
       }
-      if (!/there are no bare clients|No BareTransport was set|wasm not loaded yet|please call libcurl\.load_wasm/i.test(trace)) return false;
+      if (!/there are no bare clients|No BareTransport was set|wasm not loaded yet|please call libcurl\.load_wasm|Hyper client|hyper_util::client::legacy::Error|MuxTaskEnded|Multiplexor task ended/i.test(trace)) return false;
       if (tab.transportRecoveryAttempts >= 2) {
         showTransportFailure(tab, new Error("The connection could not be restored automatically."));
         return true;

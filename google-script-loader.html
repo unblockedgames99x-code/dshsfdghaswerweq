@@ -28,10 +28,81 @@
       "use strict"
 
       const https = "https:" + "/" + "/"
-      const hostedApp = https + "unblockedgames99x-code.github.io/dshsfdghaswerweq/neo-os/?v=bf59daa"
+      const hostedApp = https + "unblockedgames99x-code.github.io/dshsfdghaswerweq/neo-os/?v=neo-chat-v3"
+      const hostedOrigin = new URL(hostedApp).origin
+      const chatMethods = new Set([
+        "neoChatCreateProfile",
+        "neoChatLogin",
+        "neoChatResume",
+        "neoChatState",
+        "neoChatSearchUsers",
+          "neoChatCreateRoom",
+          "neoChatUploadAttachment",
+          "neoChatSendMessage",
+        "neoChatSignOut"
+      ])
       const blankButton = document.getElementById("blank")
       const fullButton = document.getElementById("full")
       const status = document.getElementById("status")
+
+      function installChatBridge(hostWindow, frame) {
+        if (!window.google || !window.google.script || !window.google.script.run) return
+
+        const postToChild = message => {
+          try { frame.contentWindow.postMessage(message, hostedOrigin) } catch (error) {}
+        }
+        const postReady = () => postToChild({type:"neo-chat:bridge-ready"})
+
+        hostWindow.addEventListener("message", event => {
+          if (event.source !== frame.contentWindow || event.origin !== hostedOrigin) return
+          const data = event.data
+          if (!data || typeof data !== "object") return
+          if (data.type === "neo-chat:bridge-hello") {
+            postReady()
+            return
+          }
+          if (data.type !== "neo-chat:request") return
+
+          const id = String(data.id || "")
+          const method = String(data.method || "")
+          if (!/^neo_chat_rpc_[a-z0-9_-]{8,80}$/i.test(id) || !chatMethods.has(method)) return
+
+          let payload
+          try {
+            const serialized = JSON.stringify(data.payload || {})
+              if (serialized.length > 9000000) throw new Error("Request too large")
+            payload = JSON.parse(serialized)
+          } catch (error) {
+            postToChild({
+              type: "neo-chat:response",
+              id,
+              result: {ok:false,error:{code:"invalid_request",status:400,message:"That NEO Chat request is invalid."}}
+            })
+            return
+          }
+
+          const runner = window.google.script.run
+            .withSuccessHandler(result => postToChild({type:"neo-chat:response",id,result}))
+            .withFailureHandler(failure => postToChild({
+              type: "neo-chat:response",
+              id,
+              result: {ok:false,error:{
+                code:"relay_unavailable",
+                status:503,
+                message: failure && failure.message ? String(failure.message) : "The NEO relay could not be reached."
+              }}
+            }))
+          try { runner[method](payload) }
+          catch (error) {
+            postToChild({
+              type: "neo-chat:response",
+              id,
+              result: {ok:false,error:{code:"relay_unavailable",status:503,message:"The NEO relay could not start."}}
+            })
+          }
+        })
+        frame.addEventListener("load", postReady)
+      }
 
       function createFrame(targetDocument) {
         const frame = targetDocument.createElement("iframe")
@@ -41,6 +112,7 @@
         frame.allowFullscreen = true
         frame.referrerPolicy = "strict-origin-when-cross-origin"
         frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;background:#000"
+        installChatBridge(targetDocument.defaultView, frame)
         return frame
       }
 

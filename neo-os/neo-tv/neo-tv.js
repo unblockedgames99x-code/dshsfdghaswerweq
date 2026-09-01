@@ -61,9 +61,14 @@
     button.dataset.neoPictureInPicture = "true";
     button.setAttribute("aria-label", "Picture in picture");
     button.setAttribute("title", "Picture in picture");
+    const video = document.querySelector("#video-element") || document.querySelector("video");
+    if (video && !video.dataset.neoWebkitPipBound && typeof video.webkitSetPresentationMode === "function") {
+      video.dataset.neoWebkitPipBound = "true";
+      video.addEventListener("webkitpresentationmodechanged", syncPictureInPictureControl);
+    }
     button.setAttribute(
       "aria-pressed",
-      String(Boolean(document.pictureInPictureElement) || document.body.classList.contains("neo-picture-in-picture")),
+      String(Boolean(document.pictureInPictureElement) || video?.webkitPresentationMode === "picture-in-picture" || document.body.classList.contains("neo-picture-in-picture")),
     );
   };
 
@@ -83,6 +88,16 @@
         setFallbackPictureInPicture(false);
       }
       return;
+    }
+
+    if (typeof video.webkitSetPresentationMode === "function" && video.webkitSupportsPresentationMode?.("picture-in-picture")) {
+      try {
+        video.webkitSetPresentationMode(video.webkitPresentationMode === "picture-in-picture" ? "inline" : "picture-in-picture");
+        syncPictureInPictureControl();
+        return;
+      } catch (_error) {
+        // Continue to the standard API or NEO TV's in-page fallback.
+      }
     }
 
     if (document.pictureInPictureEnabled && typeof video.requestPictureInPicture === "function") {
@@ -160,6 +175,14 @@
       }
     });
 
+    document.querySelectorAll("button:not([aria-label])").forEach((button) => {
+      if ((button.textContent || "").trim() || !button.querySelector("svg")) return;
+      const card = button.closest("a, article, [role='listitem']");
+      const heading = card?.querySelector("h1, h2, h3, [data-title]");
+      const label = (heading?.textContent || "").trim();
+      button.setAttribute("aria-label", label ? `Options for ${label}` : (button.title || "More options"));
+    });
+
     syncPictureInPictureControl();
     applyShellMute();
   };
@@ -168,10 +191,10 @@
   const scheduleCleanup = () => {
     if (cleanupQueued) return;
     cleanupQueued = true;
-    window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
       cleanupQueued = false;
       removePromotions();
-    });
+    }, 80);
   };
 
   const observer = new MutationObserver(scheduleCleanup);

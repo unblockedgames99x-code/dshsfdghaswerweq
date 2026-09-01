@@ -8,7 +8,9 @@
       subtitle: "Streaming and local MP3 playback",
       icon: "stream",
       template: "browser-template",
-      browserTarget: "https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@911e1f9/neo-os/music-v3/index.html?v=20260831-performance-modes-v2",
+      browserTarget: /^(?:localhost|127\.0\.0\.1)$/i.test(window.location.hostname)
+        ? "./music-v3/index.html?v=20260831-fast-full-stream-v5"
+        : "https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@911e1f9/neo-os/music-v3/index.html?v=20260831-performance-modes-v2",
       browserDirect: true,
       browserChrome: false,
       browserTheme: "stream-music",
@@ -53,9 +55,7 @@
       title: "YouTube",
       subtitle: "Videos, channels, and subscriptions",
       icon: "youtube",
-      template: "browser-template",
-      browserTarget: "https://www.youtube.com/",
-      browserChrome: false,
+      route: "./NEO-BROWSER/index.html?neo-app-mode=1&neo-app-target=https%3A%2F%2Fwww.youtube.com%2F",
       keepAlive: true,
       width: 1180,
       height: 760,
@@ -76,6 +76,20 @@
       pinned: true,
       category: "Games",
       aliases: ["geometry dash", "geometry", "dash", "rhythm", "platformer"]
+    },
+    "neo-cloud": {
+      id: "neo-cloud",
+      title: "NEO Cloud",
+      subtitle: "Cloud gaming",
+      icon: "neo-cloud",
+      route: "./neo-cloud/index.html?v=20260901-neo-cloud-v1",
+      width: 1180,
+      height: 760,
+      launcher: true,
+      pinned: false,
+      core: true,
+      category: "Games",
+      aliases: ["neo cloud", "cloud gaming", "stream games", "remote play", "cloud games"]
     },
     notes: {
       id: "notes",
@@ -248,6 +262,16 @@
         localStorage.setItem(key, JSON.stringify(ids));
       });
       localStorage.setItem(geometryDashMigrationKey, "1");
+    }
+
+    var neoCloudMigrationKey = "neo_os_add_neo_cloud_v2";
+    if (localStorage.getItem(neoCloudMigrationKey) !== "1") {
+      var cloudApps = JSON.parse(localStorage.getItem("neo_os_installed_apps_v1") || "null");
+      if (Array.isArray(cloudApps) && cloudApps.indexOf("neo-cloud") === -1) {
+        cloudApps.push("neo-cloud");
+        localStorage.setItem("neo_os_installed_apps_v1", JSON.stringify(cloudApps));
+      }
+      localStorage.setItem(neoCloudMigrationKey, "1");
     }
 
     var cineHdMigrationKey = "neo_os_cinehd_app_v1";

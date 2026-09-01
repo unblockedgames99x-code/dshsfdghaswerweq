@@ -38,6 +38,19 @@
   pointer-events: none;
 }
 
+.app.is-browser-chrome-autohide.is-shell-window-chrome-visible .browser-chrome {
+  grid-template-rows: 0fr !important;
+}
+
+.app.is-browser-chrome-autohide.is-shell-window-chrome-visible .browser-chrome-inner {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.app.is-browser-chrome-autohide.is-shell-window-chrome-visible > .browser-chrome-edge {
+  display: none !important;
+}
+
 .app.is-browser-chrome-autohide.is-browser-chrome-revealed .browser-chrome,
 .app.is-browser-chrome-autohide:has(.browser-chrome:focus-within) .browser-chrome {
   grid-template-rows: 1fr;

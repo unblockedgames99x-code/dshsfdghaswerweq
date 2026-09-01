@@ -18,6 +18,11 @@ html[data-wallpaper-media="true"] #weather-canvas {
   opacity: 0;
 }
 
+html[data-wallpaper="neo-reactive"][data-performance-mode="normal"] .rainmeter-clock {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .wallpaper-media-asset,
 .wallpaper-preview-source,
 .wallpaper-preview-canvas,
@@ -54,7 +59,94 @@ html[data-wallpaper-media="true"] #weather-canvas {
 iframe.wallpaper-media-asset {
   z-index: 0;
   border: 0;
-  pointer-events: none;
+  pointer-events: none !important;
+}
+
+.wallpaper-youtube-asset {
+  touch-action: none;
+}
+
+.wallpaper-loading {
+  z-index: -1;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  visibility: hidden;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.055), transparent 32%),
+    rgba(4, 6, 8, 0.88);
+  transition: opacity 180ms var(--neo-ease), visibility 0s linear 180ms;
+}
+
+.wallpaper-loading.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.wallpaper-loading-card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: #fff;
+  text-align: center;
+  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.46));
+}
+
+.wallpaper-loading-logo {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.wallpaper-loading-logo img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.wallpaper-loading-spinner {
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: wallpaperLoadingSpin 760ms linear infinite;
+}
+
+.wallpaper-loading-card strong {
+  font-size: clamp(12px, 1.2vw, 16px);
+  font-weight: 760;
+  letter-spacing: -0.015em;
+}
+
+.wallpaper-loading-card small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: clamp(9px, 0.8vw, 11px);
+}
+
+@keyframes wallpaperLoadingSpin {
+  to { transform: rotate(360deg); }
+}
+
+html[data-performance-mode="performance"] .wallpaper-loading,
+html[data-performance-mode="ultimate"] .wallpaper-loading {
+  background: #050709;
+  transition: none;
+}
+
+html[data-performance-mode="performance"] .wallpaper-loading-spinner,
+html[data-performance-mode="ultimate"] .wallpaper-loading-spinner {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallpaper-loading-spinner { animation-duration: 1.4s; }
 }
 
 .wallpaper-web-motion-fallback {
@@ -69,6 +161,36 @@ iframe.wallpaper-media-asset {
 
 .wallpaper-signal-canvas {
   object-fit: cover;
+}
+
+.wallpaper-neo-reactive-canvas {
+  z-index: 1;
+  object-fit: cover;
+  background: transparent;
+}
+
+.wallpaper-neo-reactive-cover {
+  position: absolute;
+  z-index: 0;
+  inset: -9%;
+  width: 118%;
+  height: 118%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  opacity: 0;
+  filter: blur(58px) saturate(1.5) brightness(0.56);
+  transform: scale(1.08);
+  transition: opacity 480ms var(--neo-ease);
+  pointer-events: none;
+  user-select: none;
+}
+
+.wallpaper-neo-reactive-cover.is-ready { opacity: 0.92; }
+
+html[data-performance-mode="performance"] .wallpaper-neo-reactive-cover {
+  filter: saturate(1.22) brightness(0.42);
+  transform: none;
 }
 
 html[data-wallpaper-playback="paused"] .wallpaper-media-asset {
@@ -113,6 +235,35 @@ html[data-wallpaper-playback="paused"] .wallpaper-media-asset {
     repeating-linear-gradient(0deg, transparent 0 19px, rgba(101, 194, 210, 0.12) 20px),
     repeating-linear-gradient(90deg, transparent 0 27px, rgba(124, 145, 255, 0.1) 28px),
     linear-gradient(135deg, #071013, #111821 52%, #050709);
+}
+
+.neo-reactive-preview {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 18% 24%, rgba(255, 56, 72, 0.58), transparent 27%),
+    radial-gradient(circle at 82% 22%, rgba(255, 188, 31, 0.48), transparent 26%),
+    radial-gradient(circle at 88% 76%, rgba(47, 232, 121, 0.5), transparent 28%),
+    radial-gradient(circle at 52% 92%, rgba(44, 210, 255, 0.48), transparent 31%),
+    radial-gradient(circle at 12% 78%, rgba(111, 76, 255, 0.55), transparent 29%),
+    radial-gradient(circle at 52% 48%, rgba(244, 61, 255, 0.16), transparent 42%),
+    #020305;
+}
+
+.neo-reactive-preview::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  width: 54%;
+  aspect-ratio: 1;
+  background: url("./assets/neo-logo.svg") center / contain no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 50%;
+  box-shadow:
+    0 0 16px rgba(48, 214, 255, 0.54),
+    0 0 30px rgba(230, 58, 255, 0.22);
+  transform: translate(-50%, -50%);
 }
 
 .studio-import-formats {
@@ -771,4 +922,49 @@ html[data-wallpaper-playback="error"] .wallpaper-runtime-state::before {
   .we-playlist-bar button[data-we-action="configure"] {
     display: none;
   }
+}
+
+@media (max-width: 480px) {
+  .wallpaper-studio .studio-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .wallpaper-studio .studio-toolbar-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(112px, auto);
+  }
+
+  .wallpaper-studio .studio-search {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .wallpaper-studio .studio-sort { min-width: 0; }
+  .wallpaper-studio .studio-sort select { width: 100%; }
+  .wallpaper-studio .studio-grid { gap: 8px; }
+  .we-playlist-bar { overflow-x: auto; scrollbar-width: none; }
+  .we-playlist-bar::-webkit-scrollbar { display: none; }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .we-source-tabs button,
+  .wallpaper-studio .studio-search,
+  .wallpaper-studio .studio-sort select,
+  .wallpaper-studio .wallpaper-favorite,
+  .we-playlist-bar button,
+  .we-add-wallpaper,
+  .wallpaper-studio button,
+  .wallpaper-studio select {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .wallpaper-studio .wallpaper-favorite {
+    min-width: 44px;
+    height: 44px;
+    font-size: 10px;
+  }
+
+  .wallpaper-studio .wallpaper-card:hover { transform: none; }
 }

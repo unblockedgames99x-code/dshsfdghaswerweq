@@ -38,7 +38,7 @@
       !/\/NEO-BROWSER\//i.test(sourceUrl) &&
       !/\/games\/web-dashers\.html(?:[?#]|$)/i.test(sourceUrl)
     ) {
-      networkRuntime = '<script src="' + escapeAttribute(resolveUrl("./neo-runner-network.js?v=20260831-chromebook-network-v1")) + '"><\/script>';
+      networkRuntime = '<script src="' + escapeAttribute(resolveUrl("./neo-runner-network.js?v=20260831-fast-full-stream-v5")) + '"><\/script>';
     }
     var injection = (hasAssetBase ? "" : '<base href="' + escapeAttribute(baseUrl) + '" target="_self">') +
       '<meta name="neo-runner" content="nested">' + networkRuntime;

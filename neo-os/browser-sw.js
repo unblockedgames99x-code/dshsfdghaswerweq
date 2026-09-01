@@ -1,9 +1,9 @@
-import "/neo-os/browser-runtime/uv/uv.bundle.js?engine=neo-browse-v67";
-import "/neo-os/browser-runtime/uv/uv.config.js?engine=neo-browse-v67";
+import "/neo-os/browser-runtime/uv/uv.bundle.js?engine=neo-browse-v68";
+import "/neo-os/browser-runtime/uv/uv.config.js?engine=neo-browse-v68";
 import "/neo-os/browser-runtime/uv/uv.sw.js";
 
-const ENGINE_VERSION = "neo-browse-v67";
-const ROUTE_PREFIX = "/neo-os/browse-v67/";
+const ENGINE_VERSION = "neo-browse-v68";
+const ROUTE_PREFIX = "/neo-os/browse-v68/";
 const ultraviolet = new UVServiceWorker();
 const RETRYABLE_METHODS = new Set(["GET", "HEAD"]);
 const FALLBACK_TIMEOUT_MS = 8000;
@@ -209,7 +209,7 @@ async function isMissingTransportResponse(response) {
   const type = response.headers.get("content-type") || "";
   if (!type.includes("text/html")) return false;
   const body = await response.clone().text().catch(() => "");
-  return /there are no bare clients|No BareTransport was set|wasm not loaded yet|please call libcurl\.load_wasm/i.test(body);
+  return /there are no bare clients|No BareTransport was set|wasm not loaded yet|please call libcurl\.load_wasm|Hyper client|hyper_util::client::legacy::Error|MuxTaskEnded|Multiplexor task ended/i.test(body);
 }
 
 async function proxyFetchWithRecovery(event) {

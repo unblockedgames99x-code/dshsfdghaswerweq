@@ -12,6 +12,9 @@
   var PRIVATE_STORAGE_KEYS = new Set([
     "neo_os_booted_session",
     "neo_os_guest_session_v1",
+    "neo_chat_local_state_v2",
+    "neo_chat_pending_profile_v1",
+    "neo_chat_saved_accounts_v1",
     "ugp_session",
     "ugp_token"
   ]);

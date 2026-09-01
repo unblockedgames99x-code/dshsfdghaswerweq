@@ -1005,8 +1005,51 @@
     var input = root.querySelector("[data-files-input]");
     var search = root.querySelector("[data-files-search]");
     var dropzone = root.querySelector("[data-files-dropzone]");
+    var coarsePointer = window.matchMedia("(hover: none), (pointer: coarse)");
+    var itemHoldTimer = 0;
+    var itemHoldStart = null;
+    var suppressItemClickUntil = 0;
+
+    function cancelItemHold() {
+      if (itemHoldTimer) window.clearTimeout(itemHoldTimer);
+      itemHoldTimer = 0;
+      itemHoldStart = null;
+    }
+
+    root.addEventListener("pointerdown", function (event) {
+      var item = event.target.closest("[data-file-id]");
+      if (!coarsePointer.matches || !item || event.pointerType === "mouse" || !event.isPrimary) return;
+      cancelItemHold();
+      itemHoldStart = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, item: item };
+      itemHoldTimer = window.setTimeout(function () {
+        if (!itemHoldStart) return;
+        var entry = state.entries.find(function (candidate) { return candidate.id === item.dataset.fileId; });
+        if (entry) {
+          showContextMenu(mount, entry, { clientX: itemHoldStart.x, clientY: itemHoldStart.y });
+          suppressItemClickUntil = Date.now() + 500;
+          if (navigator.vibrate) {
+            try { navigator.vibrate(16); } catch (error) {}
+          }
+        }
+        cancelItemHold();
+      }, 520);
+    }, { passive: true });
+
+    root.addEventListener("pointermove", function (event) {
+      if (!itemHoldStart || event.pointerId !== itemHoldStart.pointerId) return;
+      if (Math.hypot(event.clientX - itemHoldStart.x, event.clientY - itemHoldStart.y) > 12) cancelItemHold();
+    }, { passive: true });
+
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (name) {
+      root.addEventListener(name, cancelItemHold, { passive: true });
+    });
 
     root.addEventListener("click", function (event) {
+      if (Date.now() < suppressItemClickUntil && event.target.closest("[data-file-id]")) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       var menu = root.querySelector("[data-files-context-menu]");
       var newMenu = root.querySelector("[data-files-new-menu]");
       if (!event.target.closest("[data-files-context-menu]")) menu.hidden = true;
@@ -1034,6 +1077,10 @@
       var item = event.target.closest("[data-file-id]");
       if (item) {
         selectEntry(mount, item.dataset.fileId);
+        if (coarsePointer.matches) {
+          var tappedEntry = state.entries.find(function (candidate) { return candidate.id === item.dataset.fileId; });
+          if (tappedEntry) previewEntry(mount, tappedEntry);
+        }
         return;
       }
       var action = event.target.closest("[data-files-action]");
@@ -1099,10 +1146,20 @@
 
     root.addEventListener("keydown", function (event) {
       if (event.target.matches("input, textarea, select")) return;
+      var focusedItem = event.target.closest("[data-file-id]");
+      if (focusedItem) selectEntry(mount, focusedItem.dataset.fileId);
       if ((event.ctrlKey || event.metaKey) && event.key === "/") { event.preventDefault(); search.focus(); return; }
       if (event.key === "Delete" && selectedEntry(mount)) { event.preventDefault(); runAction(mount, selectedEntry(mount).trashedAt ? "delete" : "trash"); }
       if (event.key === "F2" && selectedEntry(mount) && !protectedFolderIds.has(selectedEntry(mount).id)) { event.preventDefault(); runAction(mount, "rename"); }
       if (event.key === "Enter" && selectedEntry(mount)) { event.preventDefault(); runAction(mount, "open"); }
+      if (focusedItem && (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) {
+        event.preventDefault();
+        event.stopPropagation();
+        var focusedEntry = selectedEntry(mount);
+        var rect = focusedItem.getBoundingClientRect();
+        if (focusedEntry) showContextMenu(mount, focusedEntry, { clientX: rect.left + 12, clientY: rect.top + 12 });
+        return;
+      }
       if (event.key === "Escape") {
         root.querySelector("[data-files-context-menu]").hidden = true;
         var newMenu = root.querySelector("[data-files-new-menu]");

@@ -369,7 +369,8 @@
   function mountDirect(app, panel) {
     var target;
     try { target = new URL(app.browserTarget, document.baseURI); } catch (error) { target = null; }
-    if (!target || target.protocol !== "https:") {
+    var localHttpTarget = target && target.protocol === "http:" && target.origin === window.location.origin;
+    if (!target || (target.protocol !== "https:" && !localHttpTarget)) {
       panel.innerHTML = '<div class="feature-loader is-error" role="alert"><strong>Music is unavailable</strong><p>The listening source is not valid.</p></div>';
       return;
     }

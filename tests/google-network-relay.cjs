@@ -53,6 +53,16 @@ context.neoNetworkFetch({
 assert.equal(calls[1].options.method, "post");
 assert.equal(Buffer.from(calls[1].options.payload).toString(), "str=featured&page=0");
 
+context.neoNetworkFetch({
+  url: "https://api.stratus.lol/cloud/v1/startGame",
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-API-Key": "test-key", Cookie: "blocked" },
+  bodyBase64: Buffer.from('{"uuid":"00000000-0000-4000-8000-000000000000"}').toString("base64")
+});
+assert.equal(calls[2].options.headers["x-api-key"], "test-key");
+assert.equal("cookie" in calls[2].options.headers, false);
+assert.equal(Buffer.from(calls[2].options.payload).toString(), '{"uuid":"00000000-0000-4000-8000-000000000000"}');
+
 assert.throws(
   () => context.neoNetworkFetch({ url: "https://example.com/private", method: "GET" }),
   /not approved/
@@ -62,4 +72,4 @@ assert.throws(
   /approved HTTPS/
 );
 
-console.log("Apps Script relay enforces its Music and Geometry Dash allowlist.");
+console.log("Apps Script relay enforces its Music, Geometry Dash, and NEO Cloud allowlist.");

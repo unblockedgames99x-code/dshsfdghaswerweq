@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="en" data-boot="pending" data-wallpaper="we-steam-1403160205" data-performance-mode="normal">
+<html lang="en" data-boot="pending" data-wallpaper="we-steam-1403160205" data-performance-mode="normal" data-taskbar-position="left" data-taskbar-style="current">
   <head>
-  <base href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/">
+  <base href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/">
   <meta name="neo-runner" content="google-apps-script">
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#080a0d" />
     <meta
       name="description"
-      content="NEO OS, a fast personal workspace for media, browsing, and creativity."
+      content="NEO OS, a fast personal workspace for chat, media, browsing, and creativity."
     />
     <meta name="color-scheme" content="dark" />
     <script>
@@ -50,9 +50,9 @@
       (function () {
         window.__neoProxyRecovery = Promise.resolve();
         if (!("serviceWorker" in navigator)) return;
-        var expectedEngine = "neo-browse-v67";
+        var expectedEngine = "neo-browse-v68";
         var recoveryKey = "neo_proxy_scope_recovered_" + expectedEngine;
-        var expectedScope = new URL("./browse-v67/", document.baseURI).href;
+        var expectedScope = new URL("./browse-v68/", document.baseURI).href;
         window.__neoProxyRecovery = navigator.serviceWorker.getRegistrations().then(function (registrations) {
           var stale = registrations.filter(function (registration) {
             var workers = [registration.active, registration.waiting, registration.installing].filter(Boolean);
@@ -74,46 +74,35 @@
         }).catch(function () {});
       })();
     </script>
-    <script>
-      (function () {
-        function removeLegacyMessagesUi() {
-          var gate = document.getElementById("neo-login-gate");
-          if (gate) gate.remove();
-          document.querySelectorAll('[data-app="chat"], [data-open-chat-section], [data-topbar-account]').forEach(function (element) {
-            element.remove();
-          });
-        }
-        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", removeLegacyMessagesUi, { once: true });
-        else removeLegacyMessagesUi();
-      })();
-    </script>
-    <link rel="icon" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/assets/neo-logo.svg" type="image/svg+xml" />
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/assets/neo-logo.svg" type="image/svg+xml" />
     <link
       rel="preload"
-      href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/assets/neo-logo.svg"
+      href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/assets/neo-logo.svg"
       as="image"
       type="image/svg+xml"
       fetchpriority="high"
     />
-    <link rel="preload" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/assets/fonts/anurati.otf" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/assets/fonts/anurati.otf" as="font" type="font/otf" crossorigin />
     <link rel="preconnect" href="https://vcsa.huangqirui.xyz" />
     <link rel="dns-prefetch" href="//vcsa.huangqirui.xyz" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="//cdn.jsdelivr.net" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-os.css?v=20260828-chat-name-v1" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-taskbar-menu.css?v=20260828-app-spacing-v2" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-taskbar-preview.css?v=20260828-fullscreen-hide-v3" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-apps.css?v=20260828-user-discord-v2" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-window-resize.css?v=20260830-snap-taskbar-v1" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-wallpaper-engine.css?v=20260825-white-accents-v1" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-rainmeter.css?v=20260825-default-center-v1" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-launcher-glass.css?v=20260820-profile-outline-v2" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-browser-ui.css?v=20260825-home-tabs-v2" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-flat-ui.css?v=20260819-launcher-oled-v1" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-vertical-taskbar.css?v=20260828-auto-grow-v2" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-retro-theme.css?v=20260828-launcher-dismiss-v2" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-topbar-autohide.css?v=20260831-inflow-bars-v1" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-performance.css?v=20260831-performance-modes-v2" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-os.css?v=20260901-clean-desktop-v1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-taskbar-menu.css?v=20260828-app-spacing-v2" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-taskbar-preview.css?v=20260831-scroll-strip-v1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-apps.css?v=20260901-cloud-logo-v2" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-window-resize.css?v=20260830-snap-taskbar-v1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-wallpaper-engine.css?v=20260901-wallpaper-loading-v1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-rainmeter.css?v=20260825-default-center-v1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-launcher-glass.css?v=20260820-profile-outline-v2" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-browser-ui.css?v=20260825-home-tabs-v2" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-flat-ui.css?v=20260819-launcher-oled-v1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-retro-theme.css?v=20260828-launcher-dismiss-v2" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-topbar-autohide.css?v=20260901-single-hover-bar-v1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-performance.css?v=20260831-performance-modes-v2" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-mobile.css?v=20260901-mobile-compat-v4" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-vertical-taskbar.css?v=20260901-launcher-layout-v1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-chat.css?v=20260901-production-auth-v1" />
     <title>NEO OS</title>
   
 <style id="neo-direct-boot-style">
@@ -140,7 +129,7 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
     <p id="neo-direct-status" aria-live="polite">Choose how to launch NEO OS</p>
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-direct-launch.js?v=20260830-google-boot-v4"></script>
+<script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-direct-launch.js?v=20260830-google-boot-v4"></script>
 <? } ?>
     <a class="skip-link" href="#neo-desktop">Skip to desktop</a>
 
@@ -290,9 +279,63 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
       <p class="boot-copy">Starting your workspace</p>
     </div>
 
+    <section id="neo-start-screen" class="neo-start-screen" role="dialog" aria-modal="true" aria-labelledby="neo-start-title">
+      <div class="neo-start-panel">
+        <h1 id="neo-start-title">How do you want to start?</h1>
+        <div class="neo-start-options" role="group" aria-label="Choose your device layout">
+          <button class="neo-start-option" type="button" data-start-mode="laptop">
+            <span class="neo-start-option-mark" aria-hidden="true"></span>
+            <strong>Laptop</strong>
+            <small>Full desktop interface</small>
+            <svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg>
+          </button>
+          <button class="neo-start-option" type="button" data-start-mode="mobile">
+            <span class="neo-start-option-mark" aria-hidden="true"></span>
+            <strong>Mobile</strong>
+            <small>Touch-first interface</small>
+            <svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg>
+          </button>
+        </div>
+        <div class="neo-start-actions" aria-label="Launch options">
+          <button type="button" data-start-fullscreen>Full screen</button>
+          <button type="button" data-start-blank>About:blank</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="neo-login-gate" class="neo-login-gate" role="dialog" aria-modal="true" aria-labelledby="neo-login-gate-title" tabindex="-1" hidden>
+      <div class="neo-login-app-rail" aria-hidden="true">
+        <span><svg class="icon"><use href="#i-folder"></use></svg></span>
+        <span><img src="./assets/chat-circle.svg?v=20260901-chat-icon-polish-v1" width="20" height="20" alt="" /></span>
+        <span><svg class="icon"><use href="#i-music"></use></svg></span>
+        <span><svg class="icon"><use href="#i-image"></use></svg></span>
+      </div>
+      <header class="neo-login-time" aria-label="Current date and time">
+        <time data-neo-login-clock>12:00:00</time>
+        <span data-neo-login-date>Tuesday, September 1</span>
+      </header>
+      <div class="neo-login-panel">
+        <img class="neo-login-logo" src="./assets/neo-logo.svg" width="64" height="64" alt="" />
+        <p class="neo-login-eyebrow">NEO ACCOUNT</p>
+        <h1 id="neo-login-gate-title">Welcome to NEO OS</h1>
+        <p class="neo-login-intro">Choose a saved profile or create one for Chat, then continue into your workspace.</p>
+        <div class="neo-login-auth-host" data-neo-login-auth></div>
+        <button class="neo-login-guest" type="button" data-neo-login-guest>Continue as guest</button>
+        <p class="neo-login-privacy">Guest mode stays on this device and does not join shared chat.</p>
+      </div>
+    </section>
+
     <main id="neo-desktop" class="desktop" tabindex="-1">
       <div class="wallpaper" aria-hidden="true">
         <div id="wallpaper-media" class="wallpaper-media"></div>
+        <div id="wallpaper-loading" class="wallpaper-loading" data-wallpaper-loading aria-hidden="true">
+          <div class="wallpaper-loading-card">
+            <span class="wallpaper-loading-logo"><img src="./assets/neo-logo.svg" width="96" height="96" alt="" /></span>
+            <span class="wallpaper-loading-spinner"></span>
+            <strong>Loading wallpaper</strong>
+            <small>Preparing video</small>
+          </div>
+        </div>
         <div class="wallpaper-logo"><img src="./assets/neo-logo.svg" width="1500" height="1500" alt="" fetchpriority="high" draggable="false" /></div>
         <div class="wallpaper-image"></div>
         <div class="wallpaper-aurora"></div>
@@ -324,6 +367,19 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
           <input type="file" data-neo-backup-file accept=".neo-backup,.json,application/json" hidden />
           <button class="topbar-action" type="button" data-open-launcher aria-label="Search apps" title="Search apps">
             <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+          </button>
+          <button class="topbar-action" type="button" data-app="chat" aria-label="Open NEO Chat" title="NEO Chat">
+            <svg class="icon" aria-hidden="true"><use href="#i-chat"></use></svg>
+          </button>
+          <button class="topbar-action" type="button" data-open-chat-section="servers" aria-label="Open chat spaces" title="Chat spaces">
+            <svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg>
+          </button>
+          <button class="topbar-account" type="button" data-topbar-account aria-label="Open NEO account" title="NEO account"><span data-topbar-account-initial>?</span></button>
+          <button class="topbar-action mobile-desktop-menu" type="button" data-mobile-desktop-menu aria-label="Open desktop options" title="Desktop options">
+            <svg class="icon" aria-hidden="true"><use href="#i-more"></use></svg>
+          </button>
+          <button class="topbar-action mobile-notification-toggle" type="button" data-notification-toggle aria-label="Open notifications" aria-expanded="false" title="Notifications">
+            <svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg>
           </button>
           <span class="connection-state" id="connection-state">
             <span class="connection-dot"></span>
@@ -455,8 +511,11 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
             <button class="dock-button" type="button" data-app="files" aria-label="Drive" data-tooltip="Drive">
               <span class="dock-app-tile dock-app-art app-icon-shape app-icon-google-drive"><img class="app-image-icon" src="./assets/google-drive.svg?v=20260824-drive-logo-v3" width="32" height="32" alt="" /></span>
             </button>
-            <button class="dock-button" type="button" data-app="zones" aria-label="HTML Games" data-tooltip="HTML Games">
+            <button class="dock-button" type="button" data-app="zones" aria-label="Games" data-tooltip="Games">
               <span class="dock-app-tile dock-app-art app-icon-shape app-icon-html-games"><img class="app-image-icon" src="./assets/html-games.svg?v=20260827-blue-controller-v1" width="32" height="32" alt="" /></span>
+            </button>
+            <button class="dock-button" type="button" data-app="chat" aria-label="NEO Chat" data-tooltip="NEO Chat">
+              <span class="dock-app-tile dock-app-art app-icon-shape app-icon-chat"><img class="app-image-icon" src="./assets/chat-circle.svg?v=20260901-chat-icon-polish-v1" width="32" height="32" alt="" /></span>
             </button>
             <button class="dock-button" type="button" data-app="media" aria-label="Media Player" data-tooltip="Media Player">
               <span class="dock-app-tile dock-app-art app-icon-shape app-icon-media-player"><img class="app-image-icon" src="./assets/media-player.svg?v=20260827-high-resolution-v1" width="32" height="32" alt="" /></span>
@@ -505,29 +564,6 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
         <button type="button" role="menuitem" data-desktop-action="customize"><svg class="icon" aria-hidden="true"><use href="#i-brush"></use></svg><span>Customize</span></button>
         <button type="button" role="menuitem" data-desktop-action="background"><svg class="icon" aria-hidden="true"><use href="#i-image"></use></svg><span>Background</span></button>
         <button type="button" role="menuitem" data-desktop-action="terminal"><svg class="icon" aria-hidden="true"><use href="#i-terminal"></use></svg><span>Open Terminal Here</span></button>
-        <span class="context-separator" role="separator"></span>
-        <div class="context-menu-branch" role="none">
-          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-context-submenu="view">
-            <svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg><span>View</span><svg class="icon context-arrow" aria-hidden="true"><use href="#i-chevron"></use></svg>
-          </button>
-          <div class="context-submenu" role="menu" aria-label="Desktop view" data-context-panel="view" hidden>
-            <button class="context-back" type="button" role="menuitem" data-context-back><svg class="icon context-arrow" aria-hidden="true"><use href="#i-chevron"></use></svg><span>Back</span></button>
-            <button type="button" role="menuitemradio" aria-checked="false" data-desktop-view="large"><span class="context-check" aria-hidden="true"></span><span>Large icons</span></button>
-            <button type="button" role="menuitemradio" aria-checked="true" data-desktop-view="medium"><span class="context-check" aria-hidden="true"></span><span>Medium icons</span></button>
-            <button type="button" role="menuitemradio" aria-checked="false" data-desktop-view="small"><span class="context-check" aria-hidden="true"></span><span>Small icons</span></button>
-          </div>
-        </div>
-        <div class="context-menu-branch" role="none">
-          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-context-submenu="sort">
-            <svg class="icon" aria-hidden="true"><use href="#i-sort"></use></svg><span>Sort icons</span><svg class="icon context-arrow" aria-hidden="true"><use href="#i-chevron"></use></svg>
-          </button>
-          <div class="context-submenu" role="menu" aria-label="Sort desktop icons" data-context-panel="sort" hidden>
-            <button class="context-back" type="button" role="menuitem" data-context-back><svg class="icon context-arrow" aria-hidden="true"><use href="#i-chevron"></use></svg><span>Back</span></button>
-            <button type="button" role="menuitemradio" aria-checked="true" data-desktop-sort="name"><span class="context-check" aria-hidden="true"></span><span>Name</span></button>
-            <button type="button" role="menuitemradio" aria-checked="false" data-desktop-sort="category"><span class="context-check" aria-hidden="true"></span><span>Category</span></button>
-            <button type="button" role="menuitemradio" aria-checked="false" data-desktop-sort="recent"><span class="context-check" aria-hidden="true"></span><span>Recently opened</span></button>
-          </div>
-        </div>
         <span class="context-separator" role="separator"></span>
         <div class="context-menu-branch" role="none">
           <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-context-submenu="widgets">
@@ -613,22 +649,117 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
     </template>
 
     <template id="neo-account-sign-in-template">
-      <section class="neo-browser-sign-in" aria-labelledby="neo-browser-sign-in-title">
+      <section class="neo-browser-sign-in" data-neo-sign-in-panel>
         <div class="neo-browser-sign-in-card">
-          <span class="neo-browser-sign-in-icon" aria-hidden="true"><svg class="icon"><use href="#i-chat"></use></svg></span>
-          <p class="neo-browser-sign-in-eyebrow">GLOBAL CHAT</p>
-          <h2 id="neo-browser-sign-in-title">Choose your name</h2>
-          <p class="neo-browser-sign-in-copy" data-neo-auth-copy>Pick the name people will see in Global Chat.</p>
+          <span class="neo-browser-sign-in-icon" aria-hidden="true"><img src="./assets/chat-circle.svg?v=20260901-chat-icon-polish-v1" width="28" height="28" alt="" /></span>
+          <p class="neo-browser-sign-in-eyebrow">NEO CHAT</p>
+          <h2 data-neo-auth-title>Sign in to NEO</h2>
+          <p class="neo-browser-sign-in-copy" data-neo-auth-copy>Use your NEO username and password to open shared Chat.</p>
+          <span class="neo-auth-mode" data-neo-auth-mode></span>
+          <div class="neo-auth-tabs" role="tablist" aria-label="Account action">
+            <button type="button" role="tab" aria-selected="true" data-neo-auth-action="login">Sign in</button>
+            <button type="button" role="tab" aria-selected="false" data-neo-auth-action="create">Create account</button>
+          </div>
+          <section class="neo-saved-accounts" data-neo-saved-accounts hidden aria-labelledby="neo-saved-accounts-title">
+            <p id="neo-saved-accounts-title">Saved profiles</p>
+            <div data-neo-saved-account-list role="list"></div>
+            <span class="neo-account-divider">or use a password</span>
+          </section>
           <form data-neo-sign-in-form novalidate>
             <label>
-              <span>Display name</span>
-              <input type="text" name="username" autocomplete="nickname" minlength="3" maxlength="24" placeholder="Your name" required />
+              <span>Username</span>
+              <input type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="24" placeholder="your_name" required />
             </label>
-            <button type="submit" data-neo-sign-in-submit>Continue</button>
+            <label>
+              <span>Password</span>
+              <span class="neo-auth-password-field"><input type="password" name="password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="8–72 characters" required /><button type="button" data-neo-password-toggle aria-label="Show password">Show</button></span>
+            </label>
+            <button type="submit" data-neo-sign-in-submit>Sign in</button>
             <p class="neo-browser-sign-in-feedback" data-neo-sign-in-feedback role="status" aria-live="polite"></p>
           </form>
         </div>
       </section>
+    </template>
+
+    <template id="messages-template">
+      <div class="native-app neo-messages" data-messages-app>
+        <aside class="messages-sidebar" aria-label="Chats and spaces">
+          <header class="messages-sidebar-heading">
+            <span class="messages-brand-mark" aria-hidden="true"><img src="./assets/chat-circle.svg?v=20260901-chat-icon-polish-v1" width="28" height="28" alt="" /></span>
+            <h2>NEO Chat</h2>
+            <button class="messages-compose-shortcut" type="button" data-chat-compose aria-label="Find a person or chat" title="Find a person or chat">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+            </button>
+          </header>
+          <label class="messages-search">
+            <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+            <span class="sr-only">Search chats or people</span>
+            <input type="search" data-chat-search placeholder="Search chats or people" autocomplete="off" />
+          </label>
+          <div class="messages-directory">
+            <section class="messages-pinned-section" data-chat-pinned-section aria-labelledby="messages-pinned-title">
+              <h3 id="messages-pinned-title">Spaces</h3>
+              <nav class="messages-pinned-list" data-chat-pinned-list aria-label="Pinned spaces">
+                <div class="messages-pinned-loading" aria-hidden="true"><span></span></div>
+              </nav>
+            </section>
+            <section class="messages-recent-section" aria-labelledby="messages-recent-title">
+              <h3 id="messages-recent-title">Direct messages</h3>
+              <nav class="messages-room-list" data-chat-room-list aria-label="Direct messages">
+                <div class="messages-room-loading" aria-hidden="true"><span></span><span></span><span></span></div>
+              </nav>
+            </section>
+            <section class="messages-server-section" data-chat-server-section aria-labelledby="messages-server-title" hidden>
+              <h3 id="messages-server-title">Shared spaces</h3>
+              <nav class="messages-room-list messages-server-list" data-chat-server-list aria-label="Shared spaces"></nav>
+            </section>
+          </div>
+          <footer class="messages-connection">
+            <span class="messages-connection-dot" data-chat-connection-dot aria-hidden="true"></span>
+            <span class="messages-connection-copy"><span data-chat-connection>Checking profile...</span><small data-chat-account>Guest</small></span>
+            <span class="messages-connection-actions">
+              <button class="messages-sign-in" data-chat-sign-in type="button">Create profile</button>
+              <button class="messages-sign-out" data-chat-sign-out type="button" hidden>Switch account</button>
+            </span>
+          </footer>
+        </aside>
+
+        <section class="messages-conversation" aria-labelledby="messages-conversation-title">
+          <header class="messages-conversation-heading">
+            <button class="messages-back" type="button" data-chat-back aria-label="Back to chats"><svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg></button>
+            <div class="messages-heading-person">
+              <span class="messages-heading-avatar" data-chat-heading-avatar aria-hidden="true">N</span>
+              <div><h3 id="messages-conversation-title" data-chat-title>Global Chat</h3><p data-chat-subtitle>Connecting...</p></div>
+            </div>
+          </header>
+          <div class="messages-thread" data-chat-thread role="log" aria-live="polite" aria-label="Global Chat messages">
+            <div class="messages-thread-state"><span class="library-spinner" aria-hidden="true"></span><strong>Opening NEO Chat</strong><p>Loading recent conversations.</p></div>
+          </div>
+          <form class="messages-composer" data-chat-form>
+            <div class="messages-attachment-preview" data-chat-attachment-preview hidden></div>
+            <div class="messages-composer-shell">
+              <button class="messages-attach-button" type="button" data-chat-attach aria-label="Add photo, video, audio, or file" title="Add attachment" disabled><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg></button>
+              <input type="file" data-chat-attachment-input accept="image/*,video/*,audio/*,.pdf,.txt,.zip" hidden />
+              <label class="sr-only" for="neo-message-input">Message</label>
+              <textarea id="neo-message-input" data-chat-input rows="1" maxlength="1000" placeholder="Message" disabled></textarea>
+              <button type="submit" data-chat-send aria-label="Send message" disabled><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+            </div>
+            <p data-chat-feedback aria-live="polite"></p>
+          </form>
+        </section>
+        <dialog class="messages-profile-sheet" data-chat-profile aria-labelledby="messages-profile-name">
+          <form method="dialog" class="messages-profile-card">
+            <button class="messages-profile-close" type="submit" aria-label="Close profile"><svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg></button>
+            <span class="messages-profile-avatar messages-avatar" data-chat-profile-avatar aria-hidden="true">?</span>
+            <div class="messages-profile-copy">
+              <h3 id="messages-profile-name" data-chat-profile-name>Username</h3>
+              <p data-chat-profile-status>NEO member</p>
+            </div>
+            <button class="messages-profile-dm" type="button" data-chat-profile-dm><svg class="icon" aria-hidden="true"><use href="#i-chat"></use></svg><span>Message</span></button>
+            <p class="messages-profile-feedback" data-chat-profile-feedback role="status" aria-live="polite"></p>
+          </form>
+        </dialog>
+      </div>
     </template>
 
     <template id="wallpaper-template">
@@ -796,6 +927,14 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
                   <span class="wallpaper-card-copy"><strong>Deep Field</strong><small>Scene · Stars</small></span>
                 </button>
                 <button class="wallpaper-favorite" type="button" data-wallpaper-favorite="starfield" aria-label="Favorite Deep Field" aria-pressed="false">+</button>
+                <span class="wallpaper-active-badge">Active</span>
+              </article>
+              <article class="wallpaper-card" data-wallpaper-card="neo-reactive" data-wallpaper-name="NEO Reactive" data-wallpaper-type="canvas" data-wallpaper-source-type="scene" data-wallpaper-author="NEO OS" data-wallpaper-copy="A full-spectrum NEO scene that reacts to the current song and shows its timestamp.">
+                <button class="wallpaper-card-select" type="button" data-wallpaper-option="neo-reactive" aria-pressed="false">
+                  <span class="wallpaper-card-preview local-wallpaper-preview neo-reactive-preview" data-media-badge="AUDIO"></span>
+                  <span class="wallpaper-card-copy"><strong>NEO Reactive</strong><small>Canvas · Music reactive</small></span>
+                </button>
+                <button class="wallpaper-favorite" type="button" data-wallpaper-favorite="neo-reactive" aria-label="Favorite NEO Reactive" aria-pressed="false">Save</button>
                 <span class="wallpaper-active-badge">Active</span>
               </article>
               <article class="wallpaper-card" data-wallpaper-card="signal" data-wallpaper-name="Signal Grid" data-wallpaper-copy="A live canvas scene rendered locally at an efficient frame rate.">
@@ -1007,25 +1146,43 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
             <span><strong>Wallpaper Engine</strong><small>Choose, import, and control desktop wallpaper</small></span>
             <svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg>
           </button>
-          <div class="section-heading"><div><h3>Taskbar appearance</h3><p>Adjust the desktop material live.</p></div></div>
-          <div class="material-picker" role="group" aria-label="Taskbar material">
-            <button type="button" data-taskbar-material="clear" aria-pressed="true"><span class="material-swatch material-clear"></span>Clear</button>
-            <button type="button" data-taskbar-material="transparent" aria-pressed="false"><span class="material-swatch material-transparent"></span>Transparent</button>
-            <button type="button" data-taskbar-material="blur" aria-pressed="false"><span class="material-swatch material-blur"></span>Blur</button>
-            <button type="button" data-taskbar-material="acrylic" aria-pressed="false"><span class="material-swatch material-acrylic"></span>Acrylic</button>
-            <button type="button" data-taskbar-material="opaque" aria-pressed="false"><span class="material-swatch material-opaque"></span>Opaque</button>
+          <div class="section-heading taskbar-options-heading">
+            <div><h3>Taskbar options</h3><p>Move the taskbar and choose how its surface looks.</p></div>
+            <span class="taskbar-options-status" data-taskbar-options-summary aria-live="polite">Left · Current</span>
           </div>
-          <div class="settings-control-grid taskbar-control-grid">
-            <label class="range-field">
-              <span><strong>Opacity</strong><output data-output="taskbarOpacity">0%</output></span>
-              <input type="range" min="0" max="100" step="1" value="0" data-setting="taskbarOpacity" />
+          <div class="taskbar-option-group">
+            <div class="taskbar-option-title"><strong>Placement</strong><small>Choose any screen edge</small></div>
+            <div class="taskbar-option-picker taskbar-placement-picker" role="group" aria-label="Taskbar placement">
+              <button type="button" data-taskbar-position-option="top" aria-pressed="false"><span class="taskbar-placement-preview is-top" aria-hidden="true"></span><strong>Top</strong></button>
+              <button type="button" data-taskbar-position-option="right" aria-pressed="false"><span class="taskbar-placement-preview is-right" aria-hidden="true"></span><strong>Right</strong></button>
+              <button type="button" data-taskbar-position-option="bottom" aria-pressed="false"><span class="taskbar-placement-preview is-bottom" aria-hidden="true"></span><strong>Bottom</strong></button>
+              <button type="button" data-taskbar-position-option="left" aria-pressed="true"><span class="taskbar-placement-preview is-left" aria-hidden="true"></span><strong>Left</strong></button>
+            </div>
+          </div>
+          <div class="taskbar-option-group">
+            <div class="taskbar-option-title"><strong>Style</strong><small>Current is the default</small></div>
+            <div class="taskbar-option-picker taskbar-style-picker" role="group" aria-label="Taskbar style">
+              <button type="button" data-taskbar-style-option="current" aria-pressed="true"><span class="taskbar-style-preview is-current" aria-hidden="true"></span><span><strong>Current</strong><small>Floating glass</small></span></button>
+              <button type="button" data-taskbar-style-option="transparent" aria-pressed="false"><span class="taskbar-style-preview is-transparent" aria-hidden="true"></span><span><strong>Transparent</strong><small>Icons only</small></span></button>
+              <button type="button" data-taskbar-style-option="typical" aria-pressed="false"><span class="taskbar-style-preview is-typical" aria-hidden="true"></span><span><strong>Typical</strong><small>Full edge bar</small></span></button>
+            </div>
+          </div>
+          <div class="taskbar-option-group">
+            <div class="taskbar-option-title"><strong>Tint</strong><small>Color only the taskbar surface</small></div>
+            <div class="taskbar-tint-picker" role="group" aria-label="Taskbar tint presets">
+              <button type="button" data-taskbar-tint-preset="#767c84" aria-label="Graphite tint" aria-pressed="true"><span style="--taskbar-swatch: #767c84"></span></button>
+              <button type="button" data-taskbar-tint-preset="#000000" aria-label="Black tint" aria-pressed="false"><span style="--taskbar-swatch: #000000"></span></button>
+              <button type="button" data-taskbar-tint-preset="#e8e8e8" aria-label="Silver tint" aria-pressed="false"><span style="--taskbar-swatch: #e8e8e8"></span></button>
+              <button type="button" data-taskbar-tint-preset="#315f9b" aria-label="Blue tint" aria-pressed="false"><span style="--taskbar-swatch: #315f9b"></span></button>
+              <button type="button" data-taskbar-tint-preset="#654f91" aria-label="Purple tint" aria-pressed="false"><span style="--taskbar-swatch: #654f91"></span></button>
+              <button type="button" data-taskbar-tint-preset="#42735b" aria-label="Green tint" aria-pressed="false"><span style="--taskbar-swatch: #42735b"></span></button>
+              <button type="button" data-taskbar-tint-preset="#8d4a4a" aria-label="Red tint" aria-pressed="false"><span style="--taskbar-swatch: #8d4a4a"></span></button>
+              <label class="taskbar-custom-tint"><span>Custom</span><input type="color" value="#767c84" data-setting="taskbarTint" aria-label="Custom taskbar tint" /></label>
+            </div>
+            <label class="range-field taskbar-tint-strength">
+              <span><strong>Tint strength</strong><output data-output="taskbarTintStrength">38%</output></span>
+              <input type="range" min="0" max="100" step="1" value="38" data-setting="taskbarTintStrength" />
             </label>
-            <label class="range-field">
-              <span><strong>Blur</strong><output data-output="taskbarBlur">0px</output></span>
-              <input type="range" min="0" max="40" step="1" value="0" data-setting="taskbarBlur" />
-            </label>
-            <label class="color-field"><span><strong>Tint</strong><small>Taskbar base</small></span><input type="color" value="#000000" data-setting="taskbarTint" /></label>
-            <label class="color-field"><span><strong>Accent</strong><small>All interface highlights</small></span><input type="color" value="#ffffff" data-setting="taskbarAccent" /></label>
           </div>
         </section>
       </div>
@@ -1053,29 +1210,126 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
 
     <template id="library-template">
       <div class="native-app neo-library" data-library-app>
-        <header class="native-app-heading library-heading">
-          <div>
-            <span class="eyebrow">HTML GAME LIBRARY</span>
-            <h2>Choose a game</h2>
-            <p>HTML games open from this device without another account.</p>
+        <header class="arcade-topbar">
+          <div class="arcade-brand" aria-label="NEO Games">
+            <span class="arcade-brand-mark" aria-hidden="true">N</span>
+            <strong>NEO</strong><span>GAMES</span>
           </div>
-          <span class="status-pill" data-library-count aria-live="polite">Loading</span>
+          <nav class="arcade-nav" aria-label="Games navigation">
+            <button class="arcade-nav-button is-active" type="button" data-library-nav="home" aria-pressed="true">
+              <svg class="icon" aria-hidden="true"><use href="#i-gamepad"></use></svg><span>Games</span>
+            </button>
+            <button class="arcade-nav-button" type="button" data-library-nav="favorites" aria-pressed="false">
+              <svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg><span>Favorites</span>
+              <span class="arcade-nav-count" data-library-favorite-count>0</span>
+            </button>
+          </nav>
+          <div class="arcade-actions">
+            <button class="arcade-icon-button" type="button" data-library-sound aria-pressed="false" aria-label="Mute interface sounds" title="Mute interface sounds">
+              <svg class="icon" aria-hidden="true"><use href="#i-volume"></use></svg>
+            </button>
+            <button class="arcade-settings-button" type="button" data-library-settings aria-expanded="false">
+              <svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg><span>Settings</span>
+            </button>
+          </div>
+          <div class="arcade-settings-panel" data-library-settings-panel hidden>
+            <strong>Games settings</strong>
+            <label><input type="checkbox" data-library-compact /> <span>Compact game cards</span></label>
+            <label><input type="checkbox" data-library-reduce-effects /> <span>Reduce visual effects</span></label>
+            <small>All titles and game launches stay inside NEO's local library.</small>
+          </div>
         </header>
-        <label class="hero-search library-search">
-          <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
-          <span class="sr-only">Search all HTML games</span>
-          <input type="search" data-library-search autocomplete="off" placeholder="Search all HTML games" aria-label="Search all HTML games" />
-          <span class="search-count" data-library-visible>0</span>
-        </label>
-        <div class="library-state is-loading" data-library-state role="status" aria-live="polite">
-          <span class="library-spinner" aria-hidden="true"></span>
-          <strong>Loading your library</strong>
-          <p>Reading the local catalog.</p>
-        </div>
-        <div class="library-grid" data-library-grid aria-label="HTML game library"></div>
-        <div class="library-footer">
-          <button class="button" type="button" data-library-more hidden>Show more</button>
-        </div>
+
+        <main class="arcade-main">
+          <section class="arcade-catalog" data-library-catalog>
+            <section class="arcade-gateway arcade-pulse-hero" data-library-home aria-labelledby="neo-games-title">
+              <div class="arcade-gateway-copy">
+                <span class="arcade-kicker">NEO GAME PORTAL</span>
+                <h2 id="neo-games-title">UNBLOCKED GAMES</h2>
+                <p>All your favorite games in one place.</p>
+                <form class="arcade-gateway-search" data-library-home-form>
+                  <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+                  <input type="search" data-library-home-search autocomplete="off" placeholder="Search unblocked games..." aria-label="Search games" />
+                </form>
+              </div>
+            </section>
+
+            <header class="arcade-catalog-heading">
+              <div>
+                <h2 data-library-heading>Featured Games</h2>
+              </div>
+              <span class="arcade-network-pill">NEO LOCAL · NO EMBEDS</span>
+            </header>
+
+            <section class="arcade-spotlight" data-library-spotlight aria-label="Featured game">
+              <div class="arcade-spotlight-copy">
+                <div class="arcade-spotlight-labels"><span>FEATURED</span><span>NEO GAMES</span></div>
+                <h3 data-library-spotlight-name>Loading featured game</h3>
+                <p>Choose a title and play it directly from the full NEO games library.</p>
+                <div class="arcade-spotlight-actions">
+                  <button class="arcade-primary-button" type="button" data-library-spotlight-play disabled>
+                    <svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg><span>Play Now</span>
+                  </button>
+                  <button class="arcade-icon-button" type="button" data-library-spotlight-favorite disabled aria-label="Add featured game to favorites">
+                    <svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="arcade-spotlight-visual">
+                <div class="arcade-spotlight-cover" data-library-spotlight-cover>
+                  <svg class="icon" aria-hidden="true"><use href="#i-gamepad"></use></svg>
+                </div>
+                <div class="arcade-spotlight-controls">
+                  <button type="button" data-library-spotlight-prev aria-label="Previous featured game"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg></button>
+                  <span data-library-spotlight-position>1 / 1</span>
+                  <button type="button" data-library-spotlight-next aria-label="Next featured game"><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+                </div>
+              </div>
+            </section>
+
+            <section class="arcade-filters" aria-label="Game filters">
+              <label>
+                <span>GAME LIBRARY</span>
+                <select data-library-source aria-label="Game library">
+                  <option value="all">All libraries</option>
+                  <option value="neo-local">NEO Classics</option>
+                  <option value="gn-math">GN Collection</option>
+                  <option value="staticquasar">Quasar Collection</option>
+                </select>
+              </label>
+              <label class="arcade-filter-search">
+                <span>SEARCH GAMES</span>
+                <span class="arcade-filter-control">
+                  <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+                  <input type="search" data-library-search autocomplete="off" placeholder="Search unblocked games..." aria-label="Search all games" />
+                </span>
+              </label>
+              <label>
+                <span>SORT BY</span>
+                <select data-library-sort aria-label="Sort game results">
+                  <option value="featured" selected>Recently added</option>
+                  <option value="az">Name (A-Z)</option>
+                  <option value="za">Name (Z-A)</option>
+                </select>
+              </label>
+            </section>
+
+            <header class="arcade-grid-heading">
+              <h3><span aria-hidden="true"></span><strong data-library-grid-title>All Games</strong></h3>
+              <div><span data-library-count aria-live="polite">Loading</span><span data-library-visible>0 shown</span></div>
+            </header>
+            <div class="library-state is-loading" data-library-state role="status" aria-live="polite">
+              <span class="library-spinner" aria-hidden="true"></span>
+              <strong>Loading your library</strong>
+              <p>Reading the local catalog.</p>
+            </div>
+            <div class="library-grid" data-library-grid aria-label="Local game library"></div>
+            <div class="library-footer">
+              <button class="arcade-secondary-button" type="button" data-library-more hidden>Show more</button>
+            </div>
+          </section>
+        </main>
+        <footer class="arcade-footer" data-library-footer>NEO OS · GAMES</footer>
       </div>
     </template>
 
@@ -1089,18 +1343,20 @@ body:has(#neo-desktop:target) #neo-direct-boot{display:none}
       </div>
     </template>
 
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-runner-host.js?v=20260831-chromebook-network-v1" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-frame-loader.js?v=20260831-chromebook-network-v1" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-apps.js?v=20260830-youtube-app-v1" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-music-runtime.js?v=20260831-stop-on-close-v1" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-wallpaper-engine.js?v=20260831-performance-modes-v2" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-wallpaper-quality.js?v=20260831-performance-modes-v2" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-taskbar-preview.js?v=20260831-performance-modes-v2" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-os.js?v=20260831-performance-modes-v2" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-backup.js?v=20260830-backup-v1" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-window-resize.js?v=20260830-snap-taskbar-v1" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-taskbar-menu.js?v=20260805-desktop-menu-v3" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-rainmeter.js?v=20260825-default-center-v1" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@d7649de/neo-os/neo-topbar-autohide.js?v=20260831-inflow-bars-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-runner-host.js?v=20260831-chromebook-network-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-frame-loader.js?v=20260831-fast-full-stream-v5" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-apps.js?v=20260901-youtube-proxy-app-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-music-runtime.js?v=20260831-fast-full-stream-v5" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-wallpaper-engine.js?v=20260901-wallpaper-loading-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-wallpaper-quality.js?v=20260831-performance-modes-v2" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-taskbar-preview.js?v=20260901-taskbar-options-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-chat-transport.js?v=20260901-production-auth-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-os.js?v=20260901-clean-desktop-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-backup.js?v=20260830-backup-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-window-resize.js?v=20260901-mobile-compat-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-taskbar-menu.js?v=20260901-clean-desktop-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-rainmeter.js?v=20260825-default-center-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-topbar-autohide.js?v=20260901-single-hover-bar-v1" defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@main/neo-os/neo-mobile.js?v=20260901-mobile-compat-v4" defer></script>
   </body>
 </html>

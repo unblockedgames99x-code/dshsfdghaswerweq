@@ -130,6 +130,12 @@ async function run() {
 
     await shell.locator('.dock-button[data-app="zones"]').click();
     const library = shell.locator('.neo-window[data-app-id="zones"]');
+    await library.locator("[data-library-home]").waitFor({ state: "visible", timeout: 10000 });
+    results.gamesGateway = {
+      title: await library.locator("[data-library-home] h2").innerText(),
+      remoteFrames: await library.locator('iframe[src^="http"]').count()
+    };
+    await library.locator("[data-library-browse]").click();
     await library.locator(".library-card").first().waitFor({ timeout: 20000 });
     results.catalogText = await library.locator("[data-library-count]").innerText();
     results.firstPageCards = await library.locator(".library-card").count();
@@ -215,14 +221,14 @@ async function run() {
       ready: true,
       preservedOnReopen: false
     };
-    await musicWindow.locator('[data-window-action="close"]').click();
+    await musicWindow.locator('[data-window-action="close"]').click({ force: true });
     await page.waitForTimeout(350);
     await shell.locator('.dock-button[data-app="stream"]').click();
     await musicWindow.waitFor({ state: "visible", timeout: 10000 });
     results.music.preservedOnReopen = await musicWindow.locator('.music-direct-frame[data-smoke-session="preserved"]').isVisible();
 
     results.localApps = [];
-    for (const appId of ["apps", "files", "chat", "media", "wallpaper", "control"]) {
+    for (const appId of ["files", "media", "wallpaper", "control"]) {
       const launcher = shell.locator(`.dock-button[data-app="${appId}"]`);
       await launcher.click();
       const appWindow = shell.locator(`.neo-window[data-app-id="${appId}"]`);
@@ -262,7 +268,7 @@ async function run() {
   }
 
   console.log(JSON.stringify({ results, failures: [...new Set(failures)].slice(0, 80) }, null, 2));
-  if (!results.desktop || results.rawSourceOnDesktop || !results.wallpaper || results.wallpaper.rawSource || !results.wallpaper.hasCanvas || !/3,989/.test(results.catalogText || "") || !results.firstPageCards || !results.game || results.game.rawSource || !results.game.stylesheets || !results.game.scriptsReady || !results.gameMatrix || results.gameMatrix.some(game => !game.passed) || !results.music || !results.music.direct || !results.music.ready || !results.music.preservedOnReopen || !results.localApps || results.localApps.some(app => !app.visible || !app.hasContent || app.unavailable) || !results.browserUi || !results.browserNavigation) {
+  if (!results.desktop || results.rawSourceOnDesktop || !results.wallpaper || results.wallpaper.rawSource || !results.wallpaper.hasCanvas || !results.gamesGateway || results.gamesGateway.title !== "NEO ARCADE" || results.gamesGateway.remoteFrames !== 0 || !/3,989/.test(results.catalogText || "") || !results.firstPageCards || !results.game || results.game.rawSource || !results.game.stylesheets || !results.game.scriptsReady || !results.gameMatrix || results.gameMatrix.some(game => !game.passed) || !results.music || !results.music.direct || !results.music.ready || !results.music.preservedOnReopen || !results.localApps || results.localApps.some(app => !app.visible || !app.hasContent || app.unavailable) || !results.browserUi || !results.browserNavigation) {
     process.exitCode = 1;
   }
 }

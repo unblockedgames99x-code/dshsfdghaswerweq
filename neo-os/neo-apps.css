@@ -53,6 +53,30 @@
   border-radius: inherit;
 }
 
+.app-icon-neo-cloud {
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: transparent !important;
+  box-shadow: none !important;
+}
+
+.app-icon-neo-cloud .app-image-icon {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  border-radius: 0 !important;
+  object-fit: contain !important;
+  transform: none !important;
+  image-rendering: auto !important;
+}
+
+.neo-window[data-app-id="neo-cloud"] .window-app-icon.app-icon-neo-cloud {
+  width: 22px;
+  height: 22px;
+}
+
 .window-app-icon.app-icon-stream,
 .neo-taskbar-menu-app-icon .app-icon-stream {
   border-radius: 50%;

@@ -188,8 +188,8 @@ body.neo-picture-in-picture .popout-location video {
 
 @media (max-width: 720px) {
   .neo-shell-header {
-    height: 64px;
-    padding: 0 18px;
+    height: calc(58px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
   }
 
   .neo-shell-nav a:not(:first-child) {
@@ -201,4 +201,42 @@ body.neo-picture-in-picture .popout-location video {
     width: min(360px, calc(100vw - 20px)) !important;
     height: min(203px, calc((100vw - 20px) * 0.5625)) !important;
   }
+}
+
+@media (max-width: 760px), (pointer: coarse) and (max-width: 1366px) {
+  html,
+  body,
+  #root { min-height: 100dvh; }
+
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  button[aria-label*="options" i],
+  button[aria-label*="more" i] {
+    min-width: 44px;
+    min-height: 44px;
+    position: relative;
+    z-index: 2;
+  }
+
+  input,
+  textarea,
+  select { font-size: 16px !important; }
+
+  .neo-shell-brand { min-height: 44px; display: inline-flex; align-items: center; }
+  .neo-shell-nav a { min-width: 58px; display: inline-flex; align-items: center; justify-content: center; }
+
+  body.neo-picture-in-picture .popout-location {
+    inset: auto max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) auto !important;
+    width: min(360px, calc(100vw - max(16px, env(safe-area-inset-left) + env(safe-area-inset-right)))) !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  a:hover,
+  button:hover { transform: none !important; }
 }

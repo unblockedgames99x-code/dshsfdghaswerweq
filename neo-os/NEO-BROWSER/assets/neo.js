@@ -87,12 +87,14 @@
     app.dataset.chromeAutohideReady = '1';
     app.classList.add('is-browser-chrome-autohide');
     let timer = 0;
+    let shellChromeVisible = false;
     const cancel = () => {
       if (!timer) return;
       clearTimeout(timer);
       timer = 0;
     };
     const reveal = () => {
+      if (shellChromeVisible) return;
       cancel();
       app.classList.add('is-browser-chrome-revealed');
     };
@@ -113,6 +115,15 @@
     chrome.addEventListener('focusin', reveal);
     chrome.addEventListener('focusout', hideSoon);
     window.addEventListener('blur', hideSoon);
+    window.addEventListener('message', event => {
+      if (event.source !== window.parent || event.data?.type !== 'neo-shell:window-chrome') return;
+      shellChromeVisible = event.data.visible === true;
+      app.classList.toggle('is-shell-window-chrome-visible', shellChromeVisible);
+      if (shellChromeVisible) {
+        cancel();
+        app.classList.remove('is-browser-chrome-revealed');
+      }
+    });
 
     const popupObserver = new MutationObserver(() => {
       if (chromeLocked()) reveal();

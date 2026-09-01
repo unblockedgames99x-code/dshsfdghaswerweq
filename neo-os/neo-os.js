@@ -2080,7 +2080,8 @@
       input.value = currentQuery;
       content.textContent = "";
       setBrowserState("loading");
-       import("./neo-account-signin.js?v=20260901-production-auth-v1").then(function (runtime) {
+      Promise.resolve(window.NEO_ACCOUNT_SIGNIN).then(function (runtime) {
+        if (!runtime || typeof runtime.mountAccountSignIn !== "function") throw new Error("missing_account_runtime");
         if (currentQuery !== "NEO account") return;
         signInStop = runtime.mountAccountSignIn(content, function () { setBrowserState("content"); }, function (payload) {
           window.dispatchEvent(new CustomEvent("neo-auth-changed", { detail: { user: payload.user } }));
@@ -5808,7 +5809,8 @@
       gate._neoAuthCleanup = null;
       showGateShell();
       mount.innerHTML = '<div class="neo-login-load-error" role="status"><strong>Loading profiles</strong><p>Preparing your NEO account choices...</p></div>';
-      import("./neo-account-signin.js?v=20260901-production-auth-v1").then(function (runtime) {
+      Promise.resolve(window.NEO_ACCOUNT_SIGNIN).then(function (runtime) {
+        if (!runtime || typeof runtime.mountAccountSignIn !== "function") throw new Error("missing_account_runtime");
         if (gate.hidden || version !== gateVersion) return;
         gate._neoAuthCleanup = runtime.mountAccountSignIn(mount, function () {}, function (payload) {
           try { sessionStorage.removeItem(GUEST_SESSION_KEY); } catch (error) {}

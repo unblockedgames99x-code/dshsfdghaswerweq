@@ -26,7 +26,7 @@ function clearPendingProfile(id) {
   } catch (error) {}
 }
 
-export function mountAccountSignIn(container, show, onSuccess, options) {
+function mountAccountSignIn(container, show, onSuccess, options) {
   var copyOptions = options || {};
   var template = document.getElementById("neo-account-sign-in-template");
   if (!template) throw new Error("missing_account_template");
@@ -259,3 +259,7 @@ export function mountAccountSignIn(container, show, onSuccess, options) {
     stopRequest();
   };
 }
+
+window.NEO_ACCOUNT_SIGNIN = Object.freeze({
+  mountAccountSignIn: mountAccountSignIn
+});

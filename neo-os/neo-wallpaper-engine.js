@@ -14,15 +14,18 @@
   var activeRecord = null;
   var canvasFrame = 0;
   var canvasCleanup = null;
+  var canvasResume = null;
   var playbackWatch = 0;
   var webHealthWatch = 0;
   var webHealth = null;
   var webFallbackFrame = 0;
   var webFallbackCleanup = null;
+  var webFallbackResume = null;
   var animatedImageFreeze = null;
   var pendingMedia = null;
   var cancelPendingMedia = null;
   var applySequence = 0;
+  var suspendedKey = "";
   var libraryPromise = null;
   var library = [];
   var libraryRepairPromise = null;
@@ -45,7 +48,8 @@
     wallpaperPaused: false,
     motion: true,
     batterySaver: false,
-    reduceMotion: false
+    reduceMotion: false,
+    performanceMode: "normal"
   };
 
   function openDatabase() {
@@ -531,6 +535,7 @@
   function stopCanvas() {
     if (canvasFrame) cancelAnimationFrame(canvasFrame);
     canvasFrame = 0;
+    canvasResume = null;
     if (canvasCleanup) {
       canvasCleanup();
       canvasCleanup = null;
@@ -545,6 +550,7 @@
   function stopWebFallback() {
     if (webFallbackFrame) cancelAnimationFrame(webFallbackFrame);
     webFallbackFrame = 0;
+    webFallbackResume = null;
     if (webFallbackCleanup) webFallbackCleanup();
     webFallbackCleanup = null;
     if (mediaLayer) {
@@ -591,8 +597,10 @@
     activeRecord = null;
     if (mediaLayer) mediaLayer.replaceChildren();
     if (mediaLayer) mediaLayer.style.backgroundImage = "";
+    if (mediaLayer) mediaLayer.style.backgroundColor = "";
     root.dataset.wallpaperMedia = "false";
     root.dataset.wallpaperPlayback = "idle";
+    suspendedKey = "";
     if (reason !== "switch") activeId = "";
   }
 
@@ -600,9 +608,21 @@
     return runtimeSettings.reduceMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
+  function performanceMode() {
+    return runtimeSettings.performanceMode === "ultimate"
+      ? "ultimate"
+      : runtimeSettings.performanceMode === "performance"
+        ? "performance"
+        : "normal";
+  }
+
+  function performanceActive() {
+    return performanceMode() !== "normal";
+  }
+
   function shouldPause() {
     var lowBattery = Boolean(runtimeSettings.batterySaver && battery && !battery.charging);
-    return document.hidden || mediaPriorityPaused || runtimeSettings.wallpaperPaused || !runtimeSettings.motion || reducedMotion() || lowBattery;
+    return performanceActive() || document.hidden || mediaPriorityPaused || runtimeSettings.wallpaperPaused || !runtimeSettings.motion || reducedMotion() || lowBattery;
   }
 
   function resumePlayback() {
@@ -637,6 +657,91 @@
     context.clearRect(0, 0, width, height);
     context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
     return true;
+  }
+
+  function mountPerformanceStill(id, record, sequence) {
+    var layer = ensureLayer();
+    if (!layer || sequence !== applySequence) return Promise.resolve();
+    clearMedia("switch");
+    activeId = String(id || "");
+    activeRecord = record || null;
+    suspendedKey = activeId + "|" + performanceMode() + (performanceMode() === "performance" ? "|" + (runtimeSettings.wallpaperFit || "cover") : "");
+    root.dataset.wallpaperPlayback = "paused";
+
+    if (performanceMode() === "ultimate") {
+      layer.style.backgroundImage = "";
+      root.dataset.wallpaperMedia = "false";
+      emit("performance-unmount");
+      return Promise.resolve();
+    }
+
+    root.dataset.wallpaperMedia = "true";
+    var source = record ? (urlFor(record, true) || record.preview || "") : "";
+    if (record && record.type === "youtube" && /^https?:\/\//i.test(source)) {
+      layer.style.backgroundImage = 'url("' + source.replace(/"/g, "%22") + '")';
+      layer.style.backgroundPosition = "center";
+      layer.style.backgroundSize = "cover";
+      emit("performance-still");
+      return Promise.resolve();
+    }
+
+    var canvas = document.createElement("canvas");
+    canvas.className = "wallpaper-media-asset wallpaper-performance-still";
+    canvas.dataset.performanceStill = "true";
+    canvas.setAttribute("aria-hidden", "true");
+    enforceFullBleed(canvas, runtimeSettings.wallpaperFit || "cover");
+    layer.appendChild(canvas);
+    activeMedia = canvas;
+    var context = canvas.getContext("2d", { alpha: false });
+    if (!context) {
+      layer.style.backgroundColor = "#080a0d";
+      emit("performance-still");
+      return Promise.resolve();
+    }
+    var width = Math.max(1, layer.clientWidth || window.innerWidth);
+    var height = Math.max(1, layer.clientHeight || window.innerHeight);
+    var dpr = Math.min(window.devicePixelRatio || 1, 1);
+    canvas.width = Math.max(1, Math.round(width * dpr));
+    canvas.height = Math.max(1, Math.round(height * dpr));
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    context.fillStyle = "#080a0d";
+    context.fillRect(0, 0, width, height);
+
+    if (!source) {
+      var gradient = context.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, "#071013");
+      gradient.addColorStop(1, "#050709");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, width, height);
+      emit("performance-still");
+      return Promise.resolve();
+    }
+
+    return new Promise(function (resolve) {
+      var image = new Image();
+      var settled = false;
+      var timeout = window.setTimeout(finish, 3000);
+      function finish() {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        image.onload = null;
+        image.onerror = null;
+        image.src = "";
+        if (sequence === applySequence) emit("performance-still");
+        resolve();
+      }
+      image.onload = function () {
+        if (sequence === applySequence && activeMedia === canvas) {
+          try { drawFittedImage(context, image, width, height, runtimeSettings.wallpaperFit || "cover"); } catch (_error) {}
+        }
+        finish();
+      };
+      image.onerror = finish;
+      image.decoding = "async";
+      image.src = source;
+      if (image.complete) image.onload();
+    });
   }
 
   function freezeAnimatedImage(image, fit) {
@@ -675,7 +780,7 @@
   }
 
   function startWebFallback(record, sequence) {
-    if (webFallbackFrame || !mediaLayer || !activeMedia || activeMedia.tagName !== "IFRAME") return;
+    if (webFallbackFrame || webFallbackResume || !mediaLayer || !activeMedia || activeMedia.tagName !== "IFRAME") return;
     var canvas = document.createElement("canvas");
     canvas.className = "wallpaper-web-motion-fallback";
     canvas.setAttribute("aria-hidden", "true");
@@ -703,7 +808,12 @@
     var last = 0;
     function draw(now) {
       if (sequence !== applySequence || !activeMedia || activeMedia.tagName !== "IFRAME" || !canvas.isConnected) return;
-      if (now - last >= 33 && !shouldPause()) {
+      if (shouldPause()) {
+        webFallbackFrame = 0;
+        root.dataset.wallpaperPlayback = "paused";
+        return;
+      }
+      if (now - last >= 33) {
         last = now;
         var width = canvas.clientWidth;
         var height = canvas.clientHeight;
@@ -720,9 +830,12 @@
       }
       webFallbackFrame = requestAnimationFrame(draw);
     }
+    webFallbackResume = function () {
+      if (!webFallbackFrame && canvas.isConnected && !shouldPause()) webFallbackFrame = requestAnimationFrame(draw);
+    };
     root.dataset.wallpaperWebAnimation = "fallback";
     root.dataset.wallpaperPlayback = shouldPause() ? "paused" : "playing";
-    webFallbackFrame = requestAnimationFrame(draw);
+    webFallbackResume();
     emit("web-fallback");
   }
 
@@ -776,6 +889,7 @@
       var previewSource = mediaLayer && mediaLayer.querySelector(".wallpaper-preview-source");
       if (previewSource) enforceFullBleed(previewSource, fit);
       root.dataset.wallpaperPlayback = shouldPause() ? "paused" : "playing";
+      if (!shouldPause() && canvasResume) canvasResume();
       emit("playback");
       return;
     }
@@ -804,6 +918,7 @@
       activeMedia.style.visibility = document.hidden ? "hidden" : "visible";
       root.dataset.wallpaperPlayback = paused ? "paused" : (webMotionReady ? "playing" : "loading");
       try { activeMedia.contentWindow.postMessage({ type: "neo-wallpaper-playback", paused: paused }, "*"); } catch (_error) {}
+      if (!paused && webFallbackResume) webFallbackResume();
       emit("playback");
       return;
     }
@@ -1219,7 +1334,7 @@
       }
       if (shouldPause()) {
         root.dataset.wallpaperPlayback = "paused";
-        canvasFrame = requestAnimationFrame(draw);
+        canvasFrame = 0;
         return;
       }
       if (time - last < 33) {
@@ -1258,17 +1373,37 @@
       root.dataset.wallpaperPlayback = "playing";
       canvasFrame = requestAnimationFrame(draw);
     }
-    canvasFrame = requestAnimationFrame(draw);
+    canvasResume = function () {
+      if (!canvasFrame && activeMedia === canvas && sequence === applySequence && !shouldPause()) canvasFrame = requestAnimationFrame(draw);
+    };
+    canvasResume();
     emit("mount");
   }
 
   function apply(id, nextSettings) {
     runtimeSettings = Object.assign({}, runtimeSettings, nextSettings || {});
+    runtimeSettings.performanceMode = performanceMode();
+    var nextSuspendedKey = String(id || "") + "|" + performanceMode() + (performanceMode() === "performance" ? "|" + (runtimeSettings.wallpaperFit || "cover") : "");
     cancelPending("A newer wallpaper was selected.");
+    if (performanceActive() && suspendedKey === nextSuspendedKey) {
+      root.dataset.wallpaperPlayback = "paused";
+      emit("performance-still");
+      return Promise.resolve();
+    }
+    if (!performanceActive()) suspendedKey = "";
+    if (performanceMode() === "ultimate") {
+      var ultimateSequence = ++applySequence;
+      return mountPerformanceStill(id, null, ultimateSequence);
+    }
     if (id === "signal") {
-      if (activeId === id && activeMedia) {
+      if (performanceActive()) {
+        var stillSequence = ++applySequence;
+        return mountPerformanceStill(id, null, stillSequence);
+      }
+      if (activeId === id && activeMedia && activeMedia.dataset.performanceStill !== "true") {
         activeMedia.style.objectFit = runtimeSettings.wallpaperFit || "cover";
         root.dataset.wallpaperPlayback = shouldPause() ? "paused" : "playing";
+        if (canvasResume) canvasResume();
         emit("playback");
         return Promise.resolve();
       }
@@ -1284,12 +1419,19 @@
       return Promise.resolve();
     }
     if (activeId === id && activeMedia) {
-      syncPlayback();
-      return Promise.resolve();
+      var currentlyStill = activeMedia.dataset.performanceStill === "true";
+      var activeMoves = Boolean(activeRecord && (activeRecord.previewFallback || activeRecord.type === "video" || activeRecord.type === "youtube" || activeRecord.type === "web" || activeRecord.type === "animated-image"));
+      if ((!performanceActive() && !currentlyStill) || (performanceActive() && (currentlyStill || !activeMoves))) {
+        syncPlayback();
+        return Promise.resolve();
+      }
     }
     return Promise.all([getBundledLibrary(), getLibrary()]).then(function () {
       var record = recordFor(id);
       if (!record) throw new Error("The selected wallpaper is not installed on this device.");
+      if (performanceActive() && (record.previewFallback || record.type === "video" || record.type === "youtube" || record.type === "web" || record.type === "animated-image")) {
+        return mountPerformanceStill(id, record, sequence);
+      }
       return mountRecord(record, sequence).then(function () {
         if (record.id !== id) emit("alias");
       });
@@ -1435,7 +1577,16 @@
   function init(nextHost) {
     host = nextHost || document.querySelector(".wallpaper");
     ensureLayer();
-    if (initialized) return Promise.all([getBundledLibrary(), getLibrary()]);
+    runtimeSettings.performanceMode = root.dataset.performanceMode === "ultimate"
+      ? "ultimate"
+      : root.dataset.performanceMode === "performance"
+        ? "performance"
+        : runtimeSettings.performanceMode;
+    if (initialized) {
+      return performanceMode() === "ultimate"
+        ? Promise.resolve([bundledLibrary, library])
+        : Promise.all([getBundledLibrary(), getLibrary()]);
+    }
     initialized = true;
     window.addEventListener("message", handleWebMessage);
     document.addEventListener("visibilitychange", resumePlayback);
@@ -1452,6 +1603,10 @@
         battery.addEventListener("levelchange", syncPlayback);
         syncPlayback();
       }).catch(function () {});
+    }
+    if (performanceMode() === "ultimate") {
+      emit("ready");
+      return Promise.resolve([bundledLibrary, library]);
     }
     return Promise.all([getBundledLibrary(), getLibrary()]).then(function (records) { emit("ready"); return records; });
   }

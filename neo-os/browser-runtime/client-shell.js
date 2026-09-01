@@ -681,6 +681,7 @@
   let mediaVisualizer = null;
   let mediaVisualizerRetryTimer = 0;
   let lastMediaLevels = "";
+  let shellPerformanceMode = "normal";
   const observedMedia = new WeakSet();
   const pendingAudioTrackReset = new WeakSet();
   const audioTrackResetVersion = new WeakMap();
@@ -965,6 +966,23 @@
     } catch (error) {}
   }
 
+  function normalizeShellPerformanceMode(value) {
+    return value === "ultimate" ? "ultimate" : value === "performance" ? "performance" : "normal";
+  }
+
+  function currentShellPerformanceMode() {
+    const candidates = [document.documentElement.dataset.neoPerformanceMode];
+    try { candidates.push(window.parent.document.documentElement.dataset.neoPerformanceMode); } catch (error) {}
+    try { candidates.push(window.top.document.documentElement.dataset.performanceMode); } catch (error) {}
+    const detected = candidates.find((value) => value === "performance" || value === "ultimate" || value === "normal");
+    shellPerformanceMode = normalizeShellPerformanceMode(detected || shellPerformanceMode);
+    return shellPerformanceMode;
+  }
+
+  function mediaVisualsEnabled() {
+    return currentShellPerformanceMode() === "normal";
+  }
+
   function stopMediaVisualizer(clearLevels = true) {
     window.clearTimeout(mediaVisualizerRetryTimer);
     mediaVisualizerRetryTimer = 0;
@@ -981,7 +999,7 @@
   function startMediaVisualizer(media, attempt = 0) {
     // Capturing a proxied video creates a second Chromium media pipeline and can
     // terminate the embedded renderer. Video still reports metadata and play state.
-    if (!(media instanceof HTMLAudioElement) || media.paused || media.ended || mediaMotionQuery?.matches) {
+    if (!(media instanceof HTMLAudioElement) || media.paused || media.ended || mediaMotionQuery?.matches || !mediaVisualsEnabled()) {
       stopMediaVisualizer();
       return;
     }
@@ -1017,7 +1035,7 @@
       context.resume().catch(() => {});
 
       const sample = (time) => {
-        if (mediaVisualizer !== visualizer || media.paused || media.ended) {
+        if (mediaVisualizer !== visualizer || media.paused || media.ended || !mediaVisualsEnabled()) {
           stopMediaVisualizer();
           return;
         }
@@ -1171,7 +1189,12 @@
 
   window.addEventListener("message", (event) => {
     if (event.source !== window.parent) return;
-    if (event.data?.type === "neo-browser:inspect-highlight") {
+    if (event.data?.type === "neo-shell:performance-mode") {
+      shellPerformanceMode = normalizeShellPerformanceMode(event.data.mode);
+      document.documentElement.dataset.neoPerformanceMode = shellPerformanceMode;
+      if (shellPerformanceMode === "normal" && activeMediaElement && !activeMediaElement.paused) startMediaVisualizer(activeMediaElement);
+      else stopMediaVisualizer();
+    } else if (event.data?.type === "neo-browser:inspect-highlight") {
       scheduleHighlight(inspectedElement || document.documentElement);
     } else if (event.data?.type === "neo-browser:inspect-mode") {
       setInspectMode(true);

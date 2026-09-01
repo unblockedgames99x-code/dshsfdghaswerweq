@@ -9,6 +9,10 @@
 
   if (!layer || !window.MutationObserver) return;
 
+  function enhancementEnabled() {
+    return (root.dataset.performanceMode || "normal") === "normal";
+  }
+
   function shader(gl, type, source) {
     var value = gl.createShader(type);
     gl.shaderSource(value, source);
@@ -76,6 +80,8 @@
       item.gl.deleteTexture(item.texture);
       item.gl.deleteBuffer(item.buffer);
       item.gl.deleteProgram(item.program);
+      var loseContext = item.gl.getExtension("WEBGL_lose_context");
+      if (loseContext) loseContext.loseContext();
     }
     restoreSource(item);
     if (removeCanvas !== false) item.canvas.remove();
@@ -170,6 +176,7 @@
     if (!item || item !== active || item.frame) return;
     item.frame = requestAnimationFrame(function tick(time) {
       item.frame = 0;
+      if (!enhancementEnabled()) return dispose();
       if (item !== active || !item.source.isConnected) return dispose();
       var playback = root.dataset.wallpaperPlayback || "loading";
       if (!document.hidden && playback !== "paused" && playback !== "error" && playback !== "idle") {
@@ -255,6 +262,7 @@
   }
 
   function inspect() {
+    if (!enhancementEnabled()) return dispose();
     var image = layer.querySelector("img.wallpaper-media-asset:not(.wallpaper-quality-canvas):not(.wallpaper-animated-image-source)");
     if (!image) return dispose();
     if (image.complete && image.naturalWidth) return enhance(image);
@@ -281,10 +289,11 @@
       inspect();
     }
   });
-  playbackObserver.observe(root, { attributes: true, attributeFilter: ["data-wallpaper-media", "data-wallpaper-playback"] });
+  playbackObserver.observe(root, { attributes: true, attributeFilter: ["data-wallpaper-media", "data-wallpaper-playback", "data-performance-mode"] });
 
   window.addEventListener("resize", function () { inspect(); }, { passive: true });
   document.addEventListener("visibilitychange", function () { if (active) schedule(active); });
+  window.addEventListener("neo-performance-mode-change", inspect);
   window.NeoWallpaperQuality = {
     refresh: inspect,
     getState: function () {

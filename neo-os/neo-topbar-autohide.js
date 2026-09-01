@@ -14,6 +14,10 @@
   var windowEdge = 11;
   var hideDelay = 260;
 
+  function performanceActive() {
+    return (root.dataset.performanceMode || "normal") !== "normal";
+  }
+
   function asElement(target) {
     return target && target.nodeType === 1 ? target : null;
   }
@@ -95,6 +99,7 @@
   }
 
   function onPointerMove(event) {
+    if (performanceActive()) return;
     if (event.pointerType === "touch") return;
 
     var target = asElement(event.target);
@@ -154,5 +159,19 @@
     if (activeWindow && activeWindow !== lockedWindow) activeWindow.classList.remove("is-chrome-revealed");
   });
 
-  root.classList.add("neo-auto-hide-bars");
+  function syncPerformanceMode() {
+    clearStatusHide();
+    clearWindowHide();
+    if (performanceActive()) {
+      root.classList.remove("neo-auto-hide-bars");
+      if (statusBar) statusBar.classList.remove("is-edge-revealed");
+      if (activeWindow) activeWindow.classList.remove("is-chrome-revealed");
+      activeWindow = null;
+      return;
+    }
+    root.classList.add("neo-auto-hide-bars");
+  }
+
+  window.addEventListener("neo-performance-mode-change", syncPerformanceMode);
+  syncPerformanceMode();
 })();

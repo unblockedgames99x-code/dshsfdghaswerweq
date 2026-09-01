@@ -1707,6 +1707,7 @@
     var startedAt = 0;
     var elapsed = 0;
     var running = false;
+    var watchTimer = 0;
     function updateClock() {
       var now = new Date();
       root.querySelector("[data-clock-time]").textContent = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" }).format(now);
@@ -1720,8 +1721,17 @@
       root.querySelector("[data-stopwatch]").textContent = String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0") + "." + String(hundredths).padStart(2, "0");
     }
     root.querySelector("[data-stopwatch-toggle]").addEventListener("click", function (event) {
-      if (running) { elapsed += performance.now() - startedAt; running = false; }
-      else { startedAt = performance.now(); running = true; }
+      if (running) {
+        elapsed += performance.now() - startedAt;
+        running = false;
+        window.clearInterval(watchTimer);
+        watchTimer = 0;
+        updateStopwatch();
+      } else {
+        startedAt = performance.now();
+        running = true;
+        watchTimer = window.setInterval(updateStopwatch, 40);
+      }
       event.currentTarget.textContent = running ? "Pause" : "Start";
       event.currentTarget.classList.toggle("is-running", running);
     });
@@ -1729,7 +1739,6 @@
     updateClock();
     updateStopwatch();
     var clockTimer = window.setInterval(updateClock, 1000);
-    var watchTimer = window.setInterval(updateStopwatch, 40);
     var hostWindow = body.closest(".neo-window");
     if (hostWindow) hostWindow._neoExtraCleanup = function () { window.clearInterval(clockTimer); window.clearInterval(watchTimer); };
   }

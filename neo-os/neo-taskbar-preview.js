@@ -9,6 +9,15 @@
   var activeId = "";
   var anchor = null;
 
+  function performanceMode() {
+    var mode = document.documentElement.dataset.performanceMode || "normal";
+    return mode === "ultimate" ? "ultimate" : mode === "performance" ? "performance" : "normal";
+  }
+
+  function previewsEnabled() {
+    return performanceMode() === "normal";
+  }
+
   function clearTimers() {
     window.clearTimeout(showTimer);
     window.clearTimeout(hideTimer);
@@ -112,6 +121,11 @@
     preview.querySelector("[data-taskbar-preview-open]").setAttribute("aria-label", (minimized ? "Restore " : "Switch to ") + appName(app));
     preview.querySelector("[data-taskbar-preview-close]").setAttribute("aria-label", "Close " + appName(app));
 
+    if (!previewsEnabled()) {
+      viewport.appendChild(fallbackPreview(button, app, stateText));
+      return;
+    }
+
     if (win.querySelectorAll("*").length > 900) {
       viewport.appendChild(fallbackPreview(button, app, stateText));
       return;
@@ -137,7 +151,7 @@
 
   function renderMinimizedViewport(viewport, win, button, app) {
     viewport.textContent = "";
-    if (win.querySelectorAll("*").length > 500) {
+    if (!previewsEnabled() || win.querySelectorAll("*").length > 500) {
       viewport.appendChild(fallbackPreview(button, app, "Minimized"));
       return;
     }
@@ -245,7 +259,7 @@
 
   function refreshMinimizedTray() {
     if (!minimizedTray || !api) return;
-    if (fullscreenActive()) {
+    if (fullscreenActive() || performanceMode() === "ultimate") {
       minimizedTray.hidden = true;
       return;
     }
@@ -315,7 +329,7 @@
 
   function show(button) {
     if (!api || !button || !button.isConnected) return;
-    if (fullscreenActive()) {
+    if (fullscreenActive() || !previewsEnabled()) {
       hideNow();
       return;
     }
@@ -453,6 +467,10 @@
         return;
       }
       requestAnimationFrame(refreshMinimizedTray);
+    });
+    window.addEventListener("neo-performance-mode-change", function () {
+      hideNow();
+      refreshMinimizedTray();
     });
     refreshMinimizedTray();
   }

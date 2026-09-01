@@ -7,6 +7,19 @@
   var lastSignature = "";
   var stateTimer = 0;
   var levelTimer = 0;
+  var performanceMode = "normal";
+
+  function normalizePerformanceMode(value) {
+    return value === "ultimate" ? "ultimate" : value === "performance" ? "performance" : "normal";
+  }
+
+  function parentPerformanceMode() {
+    try {
+      return normalizePerformanceMode(window.parent.document.documentElement.dataset.performanceMode);
+    } catch (error) {
+      return normalizePerformanceMode(performanceMode);
+    }
+  }
 
   function clamp(value, min, max) {
     value = Number(value);
@@ -98,9 +111,19 @@
     var values = [];
     for (var index = 0; index < 8; index += 1) {
       var wave = Math.sin((state.position * 4.2) + (index * 1.37));
-      values.push(state.playing ? 0.22 + (Math.abs(wave) * 0.72) : 0);
+      values.push(performanceMode === "normal" && state.playing ? 0.22 + (Math.abs(wave) * 0.72) : 0);
     }
     try { window.parent.postMessage({ neoMusicLevels: { values: values } }, window.location.origin); } catch (error) {}
+  }
+
+  function syncPerformanceTimers(nextMode) {
+    performanceMode = normalizePerformanceMode(nextMode || parentPerformanceMode());
+    document.documentElement.dataset.neoPerformanceMode = performanceMode;
+    window.clearInterval(stateTimer);
+    window.clearInterval(levelTimer);
+    stateTimer = window.setInterval(function () { postState(false); }, performanceMode === "normal" ? 300 : 900);
+    levelTimer = performanceMode === "normal" ? window.setInterval(postLevels, 120) : 0;
+    if (performanceMode !== "normal") postLevels();
   }
 
   function click(selector) {
@@ -193,6 +216,7 @@
   window.addEventListener("message", function (event) {
     if (event.source !== window.parent || event.origin !== window.location.origin) return;
     if (event.data && event.data.neoMusicControl) handleControl(event.data.neoMusicControl);
+    if (event.data && event.data.type === "neo-shell:performance-mode") syncPerformanceTimers(event.data.mode);
   });
 
   var observer = new MutationObserver(function () {
@@ -201,8 +225,7 @@
   });
   observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["src"] });
   bindAll();
-  stateTimer = window.setInterval(function () { postState(false); }, 300);
-  levelTimer = window.setInterval(postLevels, 120);
+  syncPerformanceTimers(parentPerformanceMode());
   window.addEventListener("pagehide", function () {
     window.clearInterval(stateTimer);
     window.clearInterval(levelTimer);

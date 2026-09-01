@@ -25,6 +25,6 @@ assert.match(engine, /media\.setAttribute\("aria-hidden", "true"\)/);
 assert.match(engine, /media\.setAttribute\("scrolling", "no"\)/);
 assert.doesNotMatch(engine, /media\.setAttribute\("allowfullscreen"/);
 
-assert.match(index, /neo-wallpaper-engine\.js\?v=20260831-youtube-clean-frame-v1/);
+assert.match(index, /neo-wallpaper-engine\.js\?v=20260831-performance-modes-v2/);
 
 console.log("YouTube wallpaper clean-frame checks passed.");

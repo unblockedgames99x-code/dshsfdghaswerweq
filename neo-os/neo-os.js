@@ -74,8 +74,13 @@
     });
   }
 
+  function normalizePerformanceMode(value) {
+    value = String(value || "").toLowerCase();
+    return value === "performance" || value === "ultimate" ? value : "normal";
+  }
+
   var defaultSettings = {
-    designVersion: 13,
+    designVersion: 14,
     wallpaper: "we-steam-1403160205",
     wallpaperFavorites: [],
     wallpaperRecent: [],
@@ -100,7 +105,7 @@
     taskbarAccent: "#ffffff",
     taskbarBlur: 0,
     reduceMotion: false,
-    performance: "auto"
+    performanceMode: "normal"
   };
 
   var savedSettings = readJson(SETTINGS_KEY, {});
@@ -127,7 +132,12 @@
   if (savedDesignVersion < 13 && savedSettings.wallpaper === "we-steam-3192588052") {
     savedSettings.wallpaper = "we-steam-1403160205";
   }
-  savedSettings.designVersion = 13;
+  if (savedDesignVersion < 14 && !savedSettings.performanceMode) {
+    savedSettings.performanceMode = savedSettings.performance === "low" ? "performance" : "normal";
+  }
+  savedSettings.performanceMode = normalizePerformanceMode(savedSettings.performanceMode);
+  delete savedSettings.performance;
+  savedSettings.designVersion = 14;
   var settings = Object.assign({}, defaultSettings, savedSettings);
   settings.wallpaperMuted = true;
   settings.wallpaperPaused = false;
@@ -236,8 +246,8 @@
     },
     control: {
       id: "control",
-      title: "Taskbar Settings",
-      subtitle: "Taskbar appearance",
+      title: "System Settings",
+      subtitle: "Performance and taskbar",
       icon: "settings",
       template: "control-template",
       width: 780,
@@ -246,7 +256,7 @@
       pinned: true,
       core: true,
       category: "System",
-      aliases: ["settings", "preferences", "taskbar"]
+      aliases: ["settings", "preferences", "taskbar", "performance", "battery", "speed"]
     },
     terminal: {
       id: "terminal",
@@ -423,7 +433,7 @@
   }
 
   function renderNowPlayingLevels(detail) {
-    if (!nowPlayingWidget || !nowPlayingState || !nowPlayingState.playing || systemPrefersReducedMotion()) {
+    if (!nowPlayingWidget || !nowPlayingState || !nowPlayingState.playing || performanceActive() || systemPrefersReducedMotion()) {
       clearNowPlayingLevels();
       return;
     }
@@ -799,25 +809,20 @@
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  function autoLowPower() {
-    var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    var saveData = Boolean(connection && connection.saveData);
-    var memoryLow = typeof navigator.deviceMemory === "number" && navigator.deviceMemory <= 4;
-    var coresLow = typeof navigator.hardwareConcurrency === "number" && navigator.hardwareConcurrency <= 4;
-    return saveData || (memoryLow && coresLow);
+  function performanceMode() {
+    return normalizePerformanceMode(settings.performanceMode);
   }
 
-  function effectiveLowPower() {
-    if (settings.performance === "low") return true;
-    if (settings.performance === "balanced") return false;
-    return autoLowPower();
+  function performanceActive() {
+    return performanceMode() !== "normal";
   }
 
   function effectiveReducedMotion() {
-    return settings.reduceMotion || systemPrefersReducedMotion();
+    return performanceActive() || settings.reduceMotion || systemPrefersReducedMotion();
   }
 
   function effectiveWallpaperMotion() {
+    if (performanceActive()) return false;
     if (!settings.motion || effectiveReducedMotion()) return false;
     return !(settings.batterySaver && isSmallScreen());
   }
@@ -858,20 +863,28 @@
 
   function applySettings(options) {
     options = options || {};
+    var mode = performanceMode();
+    var previousMode = normalizePerformanceMode(root.dataset.performanceMode);
     var wallpaper = settings.wallpaper;
     var previousWallpaper = root.dataset.wallpaper || wallpaper || "we-steam-1403160205";
-    var wallpaperSettings = Object.assign({}, settings, { motion: effectiveWallpaperMotion() });
+    var wallpaperSettings = Object.assign({}, settings, {
+      motion: effectiveWallpaperMotion(),
+      wallpaperPaused: settings.wallpaperPaused || mode !== "normal",
+      reduceMotion: settings.reduceMotion || mode !== "normal",
+      performanceMode: mode
+    });
     var accent = buildAccentPalette(settings.taskbarAccent);
     if (wallpaper === "custom" && !customWallpaperUrl) wallpaper = "we-steam-1403160205";
     root.dataset.wallpaper = wallpaper;
+    root.dataset.performanceMode = mode;
     root.dataset.motion = wallpaperSettings.motion ? "true" : "false";
-    root.dataset.weather = settings.weather && !effectiveReducedMotion() ? "true" : "false";
-    root.dataset.widgets = settings.widgets ? "true" : "false";
+    root.dataset.weather = settings.weather && mode === "normal" && !effectiveReducedMotion() ? "true" : "false";
+    root.dataset.widgets = settings.widgets && mode !== "ultimate" ? "true" : "false";
     root.dataset.widgetLock = settings.widgetLock ? "true" : "false";
-    root.dataset.dockMagnify = settings.dockMagnify ? "true" : "false";
+    root.dataset.dockMagnify = settings.dockMagnify && mode === "normal" ? "true" : "false";
     root.dataset.taskbarMaterial = settings.taskbarMaterial;
-    root.dataset.reduceMotion = settings.reduceMotion ? "true" : "false";
-    root.dataset.performance = effectiveLowPower() ? "low" : "balanced";
+    root.dataset.reduceMotion = wallpaperSettings.reduceMotion ? "true" : "false";
+    root.dataset.performance = mode === "normal" ? "balanced" : "low";
     root.style.setProperty("--wallpaper-brightness", String(clamp(Number(settings.brightness), 45, 115) / 100));
     root.style.setProperty("--wallpaper-saturation", String(clamp(Number(settings.saturation), 0, 140) / 100));
     root.style.setProperty("--wallpaper-blur", clamp(Number(settings.blur), 0, 12) + "px");
@@ -885,13 +898,18 @@
     root.style.setProperty("--neo-accent-on-light-hover", accent.onLightHover);
     root.style.setProperty("--neo-accent-soft", "rgba(" + accent.visibleRgb + ", 0.16)");
     root.style.setProperty("--messages-blue", accent.onLight);
-    document.querySelectorAll('.neo-window[data-app-id="stream"] iframe').forEach(function (frame) {
+    document.querySelectorAll(".neo-window iframe").forEach(function (frame) {
       try {
         var frameRoot = frame.contentDocument && frame.contentDocument.documentElement;
-        if (!frameRoot) return;
-        frameRoot.style.setProperty("--neo-music-accent", accent.visible);
-        frameRoot.style.setProperty("--neo-music-accent-contrast", accent.contrast);
+        if (frameRoot) {
+          frameRoot.dataset.neoPerformanceMode = mode;
+          if (frame.closest('.neo-window[data-app-id="stream"]')) {
+            frameRoot.style.setProperty("--neo-music-accent", accent.visible);
+            frameRoot.style.setProperty("--neo-music-accent-contrast", accent.contrast);
+          }
+        }
       } catch (error) {}
+      try { frame.contentWindow.postMessage({ type: "neo-shell:performance-mode", mode: mode }, "*"); } catch (error) {}
     });
     root.style.setProperty("--neo-taskbar-blur", clamp(Number(settings.taskbarBlur), 0, 40) + "px");
     if (wallpaperEngine) {
@@ -908,7 +926,14 @@
     }
     syncSettingControls();
     applyWidgetLayout();
+    setupWeatherCanvas();
     updateWeatherEngine();
+    if (previousMode !== mode) {
+      renderDock();
+      window.dispatchEvent(new CustomEvent("neo-performance-mode-change", {
+        detail: { mode: mode, previousMode: previousMode }
+      }));
+    }
     if (options.persist !== false) writeJson(SETTINGS_KEY, settings);
   }
 
@@ -936,6 +961,22 @@
       var active = button.getAttribute("data-taskbar-material") === settings.taskbarMaterial;
       button.classList.toggle("is-selected", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    var mode = performanceMode();
+    host.querySelectorAll("[data-performance-mode-button]").forEach(function (button) {
+      var active = button.getAttribute("data-performance-mode-button") === mode;
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    host.querySelectorAll("[data-performance-status]").forEach(function (status) {
+      status.textContent = mode === "ultimate" ? "ULTIMATE" : mode === "performance" ? "PERFORMANCE" : "NORMAL";
+    });
+    host.querySelectorAll("[data-performance-summary]").forEach(function (summary) {
+      summary.textContent = mode === "ultimate"
+        ? "Minimum shell, solid desktop, and no background visual work."
+        : mode === "performance"
+          ? "Wallpaper motion, blur, animations, previews, and background preloading are off."
+          : "Full visuals and animated wallpapers.";
     });
     host.querySelectorAll("[data-wallpaper-option]").forEach(function (option) {
       if (option.closest("[data-wallpaper-studio]")) return;
@@ -968,20 +1009,22 @@
     if (topbarClock) topbarClock.textContent = time;
     if (taskbarClock) taskbarClock.textContent = time;
     if (taskbarDate) taskbarDate.textContent = (now.getMonth() + 1) + "/" + now.getDate() + "/" + now.getFullYear();
-    if (rainmeter) rainmeter.setAttribute("aria-label", dayName + ", " + monthDay + ", " + now.getFullYear() + ", " + time);
-    if (rainmeterWeekday) {
-      var weekdayLetters = document.createDocumentFragment();
-      Array.from(dayName.toUpperCase()).forEach(function (letter) {
-        var glyph = document.createElement("span");
-        glyph.setAttribute("aria-hidden", "true");
-        glyph.textContent = letter;
-        weekdayLetters.appendChild(glyph);
-      });
-      rainmeterWeekday.setAttribute("aria-label", dayName);
-      rainmeterWeekday.replaceChildren(weekdayLetters);
+    if (performanceMode() !== "ultimate") {
+      if (rainmeter) rainmeter.setAttribute("aria-label", dayName + ", " + monthDay + ", " + now.getFullYear() + ", " + time);
+      if (rainmeterWeekday) {
+        var weekdayLetters = document.createDocumentFragment();
+        Array.from(dayName.toUpperCase()).forEach(function (letter) {
+          var glyph = document.createElement("span");
+          glyph.setAttribute("aria-hidden", "true");
+          glyph.textContent = letter;
+          weekdayLetters.appendChild(glyph);
+        });
+        rainmeterWeekday.setAttribute("aria-label", dayName);
+        rainmeterWeekday.replaceChildren(weekdayLetters);
+      }
+      if (rainmeterDate) rainmeterDate.textContent = String(now.getDate()).padStart(2, "0") + " " + monthName.toUpperCase() + ", " + now.getFullYear() + ".";
+      if (rainmeterTime) rainmeterTime.textContent = "- " + time + " -";
     }
-    if (rainmeterDate) rainmeterDate.textContent = String(now.getDate()).padStart(2, "0") + " " + monthName.toUpperCase() + ", " + now.getFullYear() + ".";
-    if (rainmeterTime) rainmeterTime.textContent = "- " + time + " -";
     document.querySelectorAll("[data-calendar-weekday]").forEach(function (node) { node.textContent = dayName; });
     document.querySelectorAll("[data-calendar-date]").forEach(function (node) { node.textContent = monthDay; });
     document.querySelectorAll("[data-calendar-time]").forEach(function (node) { node.textContent = time; });
@@ -1108,9 +1151,13 @@
     var dock = document.getElementById("neo-dock");
     if (!dock) return;
     var visible = new Map();
-    normalizePinnedAppOrder().forEach(function (id) {
-      if (apps[id] && apps[id].installed && apps[id].pinned) visible.set(id, apps[id]);
-    });
+    if (performanceMode() === "ultimate") {
+      if (apps.control && apps.control.installed) visible.set("control", apps.control);
+    } else {
+      normalizePinnedAppOrder().forEach(function (id) {
+        if (apps[id] && apps[id].installed && apps[id].pinned) visible.set(id, apps[id]);
+      });
+    }
     openWindows.forEach(function (_, id) { if (apps[id]) visible.set(id, apps[id]); });
     dock.textContent = "";
     visible.forEach(function (app) { dock.appendChild(createDockButton(app)); });
@@ -1530,7 +1577,7 @@
         document.head.appendChild(style);
       }
       var script = document.createElement("script");
-      script.src = "./neo-os-features.js?v=20260828-minimized-mute-v3";
+      script.src = "./neo-os-features.js?v=20260831-performance-modes-v2";
       script.async = true;
       script.onload = function () {
         if (!window.NEO_FEATURES) {
@@ -1601,13 +1648,14 @@
   }
 
   function scheduleBrowsePrewarm() {
+    if (performanceActive()) return;
     if (!("serviceWorker" in navigator) || navigator.onLine === false) return;
     var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     if (connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType || ""))) return;
 
     var warming = false;
     var warm = function () {
-      if (warming) return;
+      if (warming || performanceActive()) return;
       warming = true;
       loadBrowseRuntime().then(function (engine) {
         if (engine && typeof engine.warm === "function") return engine.warm();
@@ -2988,6 +3036,12 @@
     frame.addEventListener("load", function () {
       window.clearTimeout(timeout);
       applyHostIntegration();
+      try {
+        if (frame.contentDocument && frame.contentDocument.documentElement) {
+          frame.contentDocument.documentElement.dataset.neoPerformanceMode = performanceMode();
+        }
+        frame.contentWindow.postMessage({ type: "neo-shell:performance-mode", mode: performanceMode() }, "*");
+      } catch (_error) {}
       loader.classList.add("is-complete");
       fallback.classList.remove("is-visible");
     });
@@ -4593,7 +4647,8 @@
     var isOnlinePreview = Boolean(isOnlineAnimation
       && selectedCard.getAttribute("data-wallpaper-original-available") !== "true"
       && selectedCard.getAttribute("data-wallpaper-preview-available") === "true");
-    var canPause = isActive && (isCanvas || isVideo || isWeb || isAnimatedImage);
+    var optimized = performanceActive();
+    var canPause = !optimized && isActive && (isCanvas || isVideo || isWeb || isAnimatedImage);
     var isPaused = Boolean(isActive && (state.playback === "paused" || state.playback === "blocked"));
     var kind = record && record.type === "youtube" ? "YouTube animation" : isVideo ? "Video" : isAnimatedImage ? "Animated image" : isPreview ? "High-DPI animation" : isCanvas ? "Canvas animation" : isWeb ? "Live animation" : record ? "Local image" : isOnlinePreview ? "Web animation" : isOnlineAnimation ? "1080p animation" : "Static wallpaper";
     var runtime = studio.querySelector("[data-wallpaper-runtime-state]");
@@ -4603,7 +4658,8 @@
     var muteLabel = studio.querySelector("[data-wallpaper-mute-label]");
     var remove = studio.querySelector("[data-wallpaper-remove]");
     if (runtime) {
-      if (isActive && state.playback === "loading") runtime.textContent = "Loading " + kind.toLowerCase();
+      if (optimized && isActive) runtime.textContent = performanceMode() === "ultimate" ? "Hidden by Ultimate Performance" : "Still frame in Performance mode";
+      else if (isActive && state.playback === "loading") runtime.textContent = "Loading " + kind.toLowerCase();
       else if (isActive && state.playback === "error") runtime.textContent = kind + " could not play";
       else runtime.textContent = kind + (canPause ? (isPaused ? " paused" : " playing") : " ready");
     }
@@ -4615,7 +4671,7 @@
       if (playIcon) playIcon.setAttribute("href", isPaused ? "#i-play" : "#i-pause");
     }
     if (mute) mute.disabled = !isActive || !isVideo;
-    if (playLabel) playLabel.textContent = isPaused ? "Resume" : "Pause";
+    if (playLabel) playLabel.textContent = optimized ? "Performance still" : isPaused ? "Resume" : "Pause";
     if (muteLabel) muteLabel.textContent = settings.wallpaperMuted ? "Muted" : "Sound on";
     studio.querySelectorAll('[data-setting="wallpaperVolume"], [data-setting="wallpaperSpeed"], [data-setting="wallpaperLoop"]').forEach(function (control) {
       control.disabled = !isActive || !isVideo;
@@ -4734,6 +4790,12 @@
   function setupWeatherCanvas() {
     var canvas = document.getElementById("weather-canvas");
     if (!canvas) return;
+    if (performanceMode() !== "normal") {
+      if (weatherResizeObserver) weatherResizeObserver.disconnect();
+      weatherResizeObserver = null;
+      return;
+    }
+    if (weatherResizeObserver) return;
     if (window.ResizeObserver) {
       weatherResizeObserver = new ResizeObserver(function () { sizeWeatherCanvas(canvas); });
       weatherResizeObserver.observe(canvas);
@@ -5047,6 +5109,24 @@
       var windowAction = event.target.closest("[data-window-action]");
       if (windowAction) {
         handleWindowAction(windowAction);
+        return;
+      }
+      var performanceButton = event.target.closest("[data-performance-mode-button]");
+      if (performanceButton) {
+        var nextMode = normalizePerformanceMode(performanceButton.getAttribute("data-performance-mode-button"));
+        if (nextMode !== performanceMode()) {
+          setSetting("performanceMode", nextMode);
+          clearNowPlayingLevels();
+          showToast(
+            nextMode === "ultimate" ? "Ultimate Performance enabled" : nextMode === "performance" ? "Performance mode enabled" : "Normal mode restored",
+            nextMode === "ultimate"
+              ? "NEO OS is using its bare-bones desktop with background visuals stopped."
+              : nextMode === "performance"
+                ? "Wallpaper movement, blur, previews, and background preloading are off."
+                : "Your saved wallpaper and full visual settings are active again.",
+            nextMode === "normal" ? "refresh" : "battery"
+          );
+        }
         return;
       }
       var taskbarMaterial = event.target.closest("[data-taskbar-material]");

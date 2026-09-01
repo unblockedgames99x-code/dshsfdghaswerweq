@@ -8,7 +8,7 @@
       subtitle: "Streaming and local MP3 playback",
       icon: "stream",
       template: "browser-template",
-      browserTarget: "https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@5dfe6c6/neo-os/music-v3/index.html?v=20260830-shell-now-playing-v1",
+      browserTarget: "https://cdn.jsdelivr.net/gh/unblockedgames99x-code/dshsfdghaswerweq@911e1f9/neo-os/music-v3/index.html?v=20260831-performance-modes-v2",
       browserDirect: true,
       browserChrome: false,
       browserTheme: "stream-music",

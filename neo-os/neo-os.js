@@ -154,7 +154,7 @@
       accessibleName: "Web app",
       subtitle: "Private DuckDuckGo search",
       icon: "duckduckgo",
-      route: "./NEO-BROWSER/index.html",
+      route: "./NEO-BROWSER/index.html?v=20260831-inflow-autohide-v1",
       keepAlive: true,
       width: 1080,
       height: 720,

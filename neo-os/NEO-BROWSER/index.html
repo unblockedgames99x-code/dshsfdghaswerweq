@@ -44,8 +44,9 @@
     <!-- ES module stub: satisfies ECMAScript 6 Modules feature detection -->
     <script type="module">window._esModulesSupported = true;</script>
     <link rel="stylesheet" href="assets/base.css">
-    <link rel="stylesheet" href="assets/neo.css">
+    <link rel="stylesheet" href="assets/neo.css?v=20260831-inflow-autohide-v1">
     <link rel="stylesheet" href="assets/logo.css">
+    <link rel="stylesheet" href="assets/neo-autohide.css?v=20260831-inflow-autohide-v1">
     <script src="assets/migrate.js" defer></script>
     <script src="assets/libcurl-compat.js?v=20260831-chromebook-fallback-v1" defer></script>
     <script src="jet/jet.core.js" defer></script>
@@ -53,7 +54,7 @@
     <script src="jet/jet.utils.js" defer></script>
   <script src="assets/scramjet-runtime.js?v=20260831-chromebook-fallback-v1" defer></script>
   <script src="assets/app.js?v=20260827-jet-v4" defer></script>
-    <script src="assets/neo.js" defer></script>
+    <script src="assets/neo.js?v=20260831-inflow-autohide-v1" defer></script>
     <script src="assets/app-mode.js?v=20260828-media-focus-v6" defer></script>
 </head>
 
@@ -223,6 +224,9 @@
         </div>
     </noscript>
     <div class="app">
+        <div class="browser-chrome-edge" id="browserChromeEdge" aria-hidden="true"></div>
+        <div class="browser-chrome" id="browserChrome">
+        <div class="browser-chrome-inner">
         <div class="titlebar">
             <div class="tab-strip-wrapper">
                 <button class="tab-strip-scroll-btn" id="tabScrollLeft" title="Scroll tabs left">
@@ -335,6 +339,8 @@
             <button class="bookmarks-toggle" id="bookmarksToggle" title="Hide bookmarks bar">
                 <i class="fas fa-chevron-up"></i>
             </button>
+        </div>
+        </div>
         </div>
         </div>
 

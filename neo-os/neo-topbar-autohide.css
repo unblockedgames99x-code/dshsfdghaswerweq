@@ -22,15 +22,30 @@ html.neo-auto-hide-bars .neo-status-strip:focus-within {
 }
 
 html.neo-auto-hide-bars .neo-window {
-  grid-template-rows: minmax(0, 1fr) !important;
+  grid-template-rows: 0 minmax(0, 1fr) !important;
+  transition: grid-template-rows 210ms var(--neo-hidden-bar-ease);
 }
 
-html.neo-auto-hide-bars .neo-window > .window-chrome {
-  position: absolute !important;
-  z-index: 80;
+html.neo-auto-hide-bars .neo-window.is-chrome-revealed,
+html.neo-auto-hide-bars .neo-window.is-dragging,
+html.neo-auto-hide-bars .neo-window:has(> .window-chrome:focus-within) {
+  grid-template-rows: var(--neo-window-chrome-height) minmax(0, 1fr) !important;
+}
+
+html.neo-auto-hide-bars .neo-window::before {
+  content: "";
+  position: absolute;
+  z-index: 30;
   top: 0;
   right: 0;
   left: 0;
+  height: 11px;
+  pointer-events: auto;
+}
+
+html.neo-auto-hide-bars .neo-window > .window-chrome {
+  position: relative !important;
+  z-index: 80;
   width: 100%;
   height: var(--neo-window-chrome-height);
   min-height: var(--neo-window-chrome-height);
@@ -51,6 +66,12 @@ html.neo-auto-hide-bars .neo-window > .window-chrome:focus-within {
   transform: translate3d(0, 0, 0);
 }
 
+html.neo-auto-hide-bars .neo-window.is-chrome-revealed::before,
+html.neo-auto-hide-bars .neo-window.is-dragging::before,
+html.neo-auto-hide-bars .neo-window:has(> .window-chrome:focus-within)::before {
+  pointer-events: none;
+}
+
 html.neo-auto-hide-bars .neo-window > .window-body {
   min-width: 0;
   min-height: 0;
@@ -67,6 +88,10 @@ html.neo-auto-hide-bars .neo-window > .window-body {
     grid-template-rows: var(--neo-window-chrome-height) minmax(0, 1fr) !important;
   }
 
+  html.neo-auto-hide-bars .neo-window::before {
+    display: none;
+  }
+
   html.neo-auto-hide-bars .neo-window > .window-chrome {
     position: relative !important;
     opacity: 1;
@@ -77,7 +102,17 @@ html.neo-auto-hide-bars .neo-window > .window-body {
 
 @media (prefers-reduced-motion: reduce) {
   html.neo-auto-hide-bars .neo-status-strip,
+  html.neo-auto-hide-bars .neo-window,
   html.neo-auto-hide-bars .neo-window > .window-chrome {
     transition: none !important;
   }
+}
+
+html.neo-auto-hide-bars[data-performance-mode="performance"] .neo-status-strip,
+html.neo-auto-hide-bars[data-performance-mode="performance"] .neo-window,
+html.neo-auto-hide-bars[data-performance-mode="performance"] .neo-window > .window-chrome,
+html.neo-auto-hide-bars[data-performance-mode="ultimate"] .neo-status-strip,
+html.neo-auto-hide-bars[data-performance-mode="ultimate"] .neo-window,
+html.neo-auto-hide-bars[data-performance-mode="ultimate"] .neo-window > .window-chrome {
+  transition: none !important;
 }

@@ -14,10 +14,6 @@
   var windowEdge = 11;
   var hideDelay = 260;
 
-  function performanceActive() {
-    return (root.dataset.performanceMode || "normal") !== "normal";
-  }
-
   function asElement(target) {
     return target && target.nodeType === 1 ? target : null;
   }
@@ -86,10 +82,13 @@
   function edgeWindowAt(x, y) {
     if (!document.elementsFromPoint) return null;
     var stack = document.elementsFromPoint(x, y);
+    var checked = null;
     for (var i = 0; i < stack.length; i += 1) {
       var element = stack[i];
       var win = element && element.closest ? element.closest(".neo-window") : null;
       if (!isVisibleWindow(win)) continue;
+      if (!checked) checked = win;
+      if (win !== checked) break;
       var rect = win.getBoundingClientRect();
       if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.top + windowEdge) {
         return win;
@@ -99,7 +98,6 @@
   }
 
   function onPointerMove(event) {
-    if (performanceActive()) return;
     if (event.pointerType === "touch") return;
 
     var target = asElement(event.target);
@@ -136,6 +134,14 @@
   }, true);
   document.addEventListener("pointerup", releaseWindowLock, true);
   document.addEventListener("pointercancel", releaseWindowLock, true);
+  document.addEventListener("pointerout", function (event) {
+    var target = asElement(event.target);
+    var chrome = target && target.closest ? target.closest(".window-chrome") : null;
+    if (!chrome) return;
+    var next = asElement(event.relatedTarget);
+    if (next && chrome.contains(next)) return;
+    hideWindowSoon(chrome.closest(".neo-window"));
+  }, true);
   document.addEventListener("focusin", function (event) {
     var target = asElement(event.target);
     if (statusBar && target && statusBar.contains(target)) revealStatus();
@@ -155,23 +161,11 @@
   window.addEventListener("blur", function () {
     clearStatusHide();
     clearWindowHide();
+    lockedWindow = null;
     if (statusBar) statusBar.classList.remove("is-edge-revealed");
-    if (activeWindow && activeWindow !== lockedWindow) activeWindow.classList.remove("is-chrome-revealed");
+    if (activeWindow) activeWindow.classList.remove("is-chrome-revealed");
+    activeWindow = null;
   });
 
-  function syncPerformanceMode() {
-    clearStatusHide();
-    clearWindowHide();
-    if (performanceActive()) {
-      root.classList.remove("neo-auto-hide-bars");
-      if (statusBar) statusBar.classList.remove("is-edge-revealed");
-      if (activeWindow) activeWindow.classList.remove("is-chrome-revealed");
-      activeWindow = null;
-      return;
-    }
-    root.classList.add("neo-auto-hide-bars");
-  }
-
-  window.addEventListener("neo-performance-mode-change", syncPerformanceMode);
-  syncPerformanceMode();
+  root.classList.add("neo-auto-hide-bars");
 })();

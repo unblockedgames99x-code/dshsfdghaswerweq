@@ -74,12 +74,63 @@
     $all('.settings-nav-item').forEach(tab => tab.setAttribute('aria-selected', String(tab.classList.contains('active'))));
   }
 
+  function initBrowserChromeAutohide() {
+    const root = document.documentElement;
+    const finePointer = window.matchMedia?.('(hover: hover) and (pointer: fine)');
+    if (root.classList.contains('neo-app-mode') || (finePointer && !finePointer.matches)) return;
+
+    const app = document.querySelector('.app');
+    const chrome = document.getElementById('browserChrome');
+    const edge = document.getElementById('browserChromeEdge');
+    if (!app || !chrome || !edge || app.dataset.chromeAutohideReady) return;
+
+    app.dataset.chromeAutohideReady = '1';
+    app.classList.add('is-browser-chrome-autohide');
+    let timer = 0;
+    const cancel = () => {
+      if (!timer) return;
+      clearTimeout(timer);
+      timer = 0;
+    };
+    const reveal = () => {
+      cancel();
+      app.classList.add('is-browser-chrome-revealed');
+    };
+    const chromeLocked = () => Boolean(
+      document.querySelector('#historyPopup.open,#siteInfoPopup.open,#adblockModal.open,#tabContextMenu.active,#extPanel.open,#extPopupWrap.open,.tab.tab-dragging')
+    );
+    const hideSoon = () => {
+      cancel();
+      timer = setTimeout(() => {
+        timer = 0;
+        if (chrome.matches(':hover') || chrome.contains(document.activeElement) || chromeLocked()) return;
+        app.classList.remove('is-browser-chrome-revealed');
+      }, 260);
+    };
+    edge.addEventListener('pointerenter', reveal);
+    chrome.addEventListener('pointerenter', reveal);
+    chrome.addEventListener('pointerleave', hideSoon);
+    chrome.addEventListener('focusin', reveal);
+    chrome.addEventListener('focusout', hideSoon);
+    window.addEventListener('blur', hideSoon);
+
+    const popupObserver = new MutationObserver(() => {
+      if (chromeLocked()) reveal();
+      else hideSoon();
+    });
+    ['historyPopup', 'siteInfoPopup', 'adblockModal', 'tabContextMenu', 'extPanel', 'extPopupWrap'].forEach(id => {
+      const popup = document.getElementById(id);
+      if (popup) popupObserver.observe(popup, { attributes: true, attributeFilter: ['class'] });
+    });
+  }
+
   function boot() {
     document.title = 'NEO BROWSER';
     document.documentElement.removeAttribute('data-skin');
     document.body.removeAttribute('data-skin');
     enhanceControls();
     sanitisePromotionalLinks();
+    initBrowserChromeAutohide();
 
     const engine = document.getElementById('ntEngine');
     if (engine) {

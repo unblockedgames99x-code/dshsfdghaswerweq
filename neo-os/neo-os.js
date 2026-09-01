@@ -63,6 +63,7 @@
   var filesRuntimePromise = null;
   var onlineWallpaperRuntimePromise = null;
   var browseRuntimePromise = null;
+  var browsePrewarmScheduled = false;
   var onlineWallpaperRequestSerial = 0;
   var shellApi = null;
 
@@ -933,6 +934,7 @@
       window.dispatchEvent(new CustomEvent("neo-performance-mode-change", {
         detail: { mode: mode, previousMode: previousMode }
       }));
+      if (mode === "normal") scheduleBrowsePrewarm();
     }
     if (options.persist !== false) writeJson(SETTINGS_KEY, settings);
   }
@@ -1648,35 +1650,50 @@
   }
 
   function scheduleBrowsePrewarm() {
-    if (performanceActive()) return;
+    if (performanceActive() || browsePrewarmScheduled || window.NEO_BROWSER_ENGINE) return;
     if (!("serviceWorker" in navigator) || navigator.onLine === false) return;
     var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     if (connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType || ""))) return;
 
+    browsePrewarmScheduled = true;
     var warming = false;
+    var idleId = 0;
+    var timeoutId = 0;
+    function prewarmOnPointer(event) {
+      if (!event.target.closest('[data-app="browser"], [data-app="stream"]')) return;
+      warm();
+    }
+    function prewarmOnFocus(event) {
+      if (!event.target.closest('[data-app="browser"], [data-app="stream"]')) return;
+      warm();
+    }
+    function cleanupTriggers() {
+      document.removeEventListener("pointerover", prewarmOnPointer);
+      document.removeEventListener("focusin", prewarmOnFocus);
+      if (idleId && "cancelIdleCallback" in window) window.cancelIdleCallback(idleId);
+      if (timeoutId) window.clearTimeout(timeoutId);
+      idleId = 0;
+      timeoutId = 0;
+    }
     var warm = function () {
-      if (warming || performanceActive()) return;
+      if (warming) return;
+      cleanupTriggers();
+      if (performanceActive()) {
+        browsePrewarmScheduled = false;
+        return;
+      }
       warming = true;
       loadBrowseRuntime().then(function (engine) {
         if (engine && typeof engine.warm === "function") return engine.warm();
-      }).catch(function () {});
+      }).catch(function () {}).finally(function () {
+        browsePrewarmScheduled = false;
+      });
     };
 
-    document.addEventListener("pointerover", function prewarmOnPointer(event) {
-      if (!event.target.closest('[data-app="browser"], [data-app="stream"]')) return;
-      document.removeEventListener("pointerover", prewarmOnPointer);
-      document.removeEventListener("focusin", prewarmOnFocus);
-      warm();
-    }, { passive: true });
-    function prewarmOnFocus(event) {
-      if (!event.target.closest('[data-app="browser"], [data-app="stream"]')) return;
-      document.removeEventListener("pointerover", prewarmOnPointer);
-      document.removeEventListener("focusin", prewarmOnFocus);
-      warm();
-    }
+    document.addEventListener("pointerover", prewarmOnPointer, { passive: true });
     document.addEventListener("focusin", prewarmOnFocus);
-    if ("requestIdleCallback" in window) window.requestIdleCallback(warm, { timeout: 1400 });
-    else window.setTimeout(warm, 450);
+    if ("requestIdleCallback" in window) idleId = window.requestIdleCallback(warm, { timeout: 1400 });
+    else timeoutId = window.setTimeout(warm, 450);
   }
 
   function mountLazyApp(app, body) {
